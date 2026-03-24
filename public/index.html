@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Keeper Coach - Login</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="login-bg">
+    <div class="login-container glassmorphism">
+        <div class="logo-container">
+            <h1><span>My</span> Keeper <span>Coach</span></h1>
+            <p>Coach with purpose. Develop with proof.</p>
+        </div>
+        
+        <form id="loginForm" class="login-form">
+            <div class="input-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required placeholder="player@example.com">
+            </div>
+            
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required placeholder="••••••••">
+            </div>
+            
+            <button type="submit" class="btn primary-btn" id="loginBtn">Log In</button>
+            <p id="errorMsg" class="error-msg"></p>
+        </form>
+
+        <div class="admin-link">
+            <a href="/admin">Coach / Admin Portal</a>
+        </div>
+        <div class="admin-link" style="margin-top: 5px;">
+            <a href="/signup.html" style="font-weight: 600; color: var(--accent);">Don't have an account? Sign Up for Free</a>
+        </div>
+
+        <!-- Trial Callout -->
+        <div class="trial-callout">
+            <div class="trial-callout-icon">⚽</div>
+            <p class="trial-callout-headline">Free Trial — Full Access Until June 30</p>
+            <p class="trial-callout-sub">Full platform access. No credit card. No limits. Just coaching.</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Modular) -->
+    <script type="module" src="/js/firebase-config.js"></script>
+    <script type="module" src="/js/auth.js"></script>
+
+    <!-- Ted Chatbot Widget -->
+    <link rel="stylesheet" href="/css/chat-widget.css?v=10">
+    <script src="/js/chat-widget.js?v=10"></script>
+</body>
+</html>
