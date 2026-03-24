@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://goalie-coach-dev-11a17.web.app", "https://goalie-coach-dev-11a17.firebaseapp.com", "http://localhost:5000", "http://localhost:5001"],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type", "Content-Length", "Content-Range", "Accept-Ranges"],
+    "maxAgeSeconds": 3600
+  }
+]

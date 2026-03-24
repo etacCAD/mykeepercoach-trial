@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "default": "goalie-coach-dev-11a17",
+    "staging": "goalie-coach-dev-11a17",
+    "production": "goalie-coach-prod"
+  },
+  "targets": {},
+  "etags": {}
+}

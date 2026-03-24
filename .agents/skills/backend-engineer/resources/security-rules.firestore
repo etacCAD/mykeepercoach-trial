@@ -1,0 +1,316 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      // Check custom claim first (set by setUserRole Cloud Function after onboarding)
+      // Fall back to the Firestore users document for accounts that haven't refreshed token yet.
+      return isAuthenticated() && (
+        request.auth.token.role == role ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role
+      );
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // --- Keeper relationship helpers ---
+
+    function getKeeper(keeperId) {
+      return get(/databases/$(database)/documents/keepers/$(keeperId));
+    }
+
+    function isCoachOf(keeperId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/keepers/$(keeperId))
+        && getKeeper(keeperId).data.coachUserId == request.auth.uid;
+    }
+
+    function isKeeperSelf(keeperId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/keepers/$(keeperId))
+        && getKeeper(keeperId).data.keeperUserId == request.auth.uid;
+    }
+
+    function isParentOf(keeperId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/keepers/$(keeperId))
+        && request.auth.uid in getKeeper(keeperId).data.parentUserIds;
+    }
+
+    // --- Club role helpers (Phase 2 — placeholder) ---
+    // These return false in MVP. When club features ship, they will
+    // check the caller's clubId + clubRole custom claims against
+    // the keeper's clubId.
+
+    function isClubGoalieCoach(keeperId) {
+      // Phase 2: Goalie coach sees ALL keepers in their club
+      // let keeper = getKeeper(keeperId);
+      // let callerClub = request.auth.token.clubId;
+      // let callerRole = request.auth.token.clubRole;
+      // return callerClub != null
+      //   && keeper.data.clubId == callerClub
+      //   && callerRole == 'goalieCoach';
+      return false;
+    }
+
+    function isClubDirector(keeperId) {
+      // Phase 2: Director can read anything in their club
+      // let keeper = getKeeper(keeperId);
+      // let callerClub = request.auth.token.clubId;
+      // let callerRole = request.auth.token.clubRole;
+      // return callerClub != null
+      //   && keeper.data.clubId == callerClub
+      //   && callerRole == 'director';
+      return false;
+    }
+
+    // --- Validation helpers ---
+
+    function isValidRating(value) {
+      return value is int && value >= 1 && value <= 5;
+    }
+
+    function inRange(value, min, max) {
+      return value is number && value >= min && value <= max;
+    }
+
+    function isValidVisibility(value) {
+      return value in ['private', 'shared'];
+    }
+
+    function isValidAgeGroup(value) {
+      return value in ['U8-U13', 'U14-U18'];
+    }
+
+    // ============================================================
+    // USER PROFILES
+    // ============================================================
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      // Allow user to create/update their own document (used by AuthService.writeUserDocument)
+      allow create: if isOwner(uid)
+        && request.resource.data.role in ['coach', 'keeper', 'parent'];
+      allow update: if isOwner(uid);
+      allow delete: if false; // Cloud Function only
+
+      // --------------------------------------------------------
+      // VIDEO SESSIONS (Web Dashboard uploads)
+      // --------------------------------------------------------
+      match /sessions/{sessionId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // ============================================================
+    // KEEPER PROFILES
+    // ============================================================
+
+    match /keepers/{keeperId} {
+      allow read: if isCoachOf(keeperId)
+                  || isKeeperSelf(keeperId)
+                  || isParentOf(keeperId)
+                  || isClubGoalieCoach(keeperId)
+                  || isClubDirector(keeperId);
+
+      // Coach can create a keeper profile that belongs to them
+      allow create: if hasRole('coach')
+        && request.resource.data.coachUserId == request.auth.uid;
+      
+      // Independent keeper self-creation (no coach)
+      allow create: if hasRole('keeper')
+        && request.resource.data.keeperUserId == request.auth.uid;
+
+      // Allow authenticated users to run collection queries by invite code.
+      // Required for .whereField("keeperInviteCode") in ParentLinkView
+      // and .whereField("keeperUserId") in KeeperLinkView.
+      allow list: if isAuthenticated();
+
+      // Coach can update any keeper they own
+      allow update: if isCoachOf(keeperId)
+        && request.resource.data.coachUserId == resource.data.coachUserId;
+      
+      // Keeper can link their account (write keeperUserId)
+      allow update: if isAuthenticated() && hasRole('keeper')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['keeperUserId', 'updatedAt']);
+      
+      // Parent can add themselves to parentUserIds when linking
+      allow update: if isAuthenticated() && hasRole('parent')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['parentUserIds', 'updatedAt']);
+
+      allow delete: if false; // COPPA — Cloud Function only
+
+      // --------------------------------------------------------
+      // ASSESSMENTS — Visibility-based reads
+      // --------------------------------------------------------
+
+      match /assessments/{assessmentId} {
+        // Coach always reads all assessments
+        // Keeper reads only 'shared' assessments
+        // Parent reads only 'shared' assessments (Phase 2)
+        // Club goalie coach / director reads all (Phase 2)
+        allow read: if isCoachOf(keeperId)
+                    || isClubGoalieCoach(keeperId)
+                    || isClubDirector(keeperId)
+                    || (isKeeperSelf(keeperId)
+                        && resource.data.visibility == 'shared')
+                    || (isParentOf(keeperId)
+                        && resource.data.visibility == 'shared');
+
+        allow create: if (isCoachOf(keeperId)
+                          && request.resource.data.assessorRole == 'coach'
+                          && isValidVisibility(request.resource.data.visibility))
+                      || (isKeeperSelf(keeperId)
+                          && request.resource.data.assessorRole == 'self'
+                          && request.resource.data.assessorUserId == request.auth.uid
+                          && request.resource.data.visibility == 'shared');
+
+        allow update, delete: if isCoachOf(keeperId);
+      }
+
+      // --------------------------------------------------------
+      // MATCH REPORTS
+      // --------------------------------------------------------
+
+      match /matchReports/{reportId} {
+        // Coach always reads
+        // Keeper reads if reportVisibility == 'shared'
+        // Parent reads if reportVisibility == 'shared' (Phase 2)
+        allow read: if isCoachOf(keeperId)
+                    || isClubGoalieCoach(keeperId)
+                    || isClubDirector(keeperId)
+                    || (isKeeperSelf(keeperId)
+                        && resource.data.reportVisibility == 'shared')
+                    || (isParentOf(keeperId)
+                        && resource.data.reportVisibility == 'shared');
+
+        allow create: if isCoachOf(keeperId)
+          && request.resource.data.coachUserId == request.auth.uid
+          && inRange(request.resource.data.overallRating, 1.0, 10.0)
+          && isValidVisibility(request.resource.data.reportVisibility);
+
+        allow update: if isCoachOf(keeperId);
+        allow delete: if isCoachOf(keeperId);
+      }
+
+      // --------------------------------------------------------
+      // DRILL SESSIONS
+      // --------------------------------------------------------
+
+      match /drillSessions/{sessionId} {
+        allow read: if isCoachOf(keeperId)
+                    || isKeeperSelf(keeperId)
+                    || isClubGoalieCoach(keeperId)
+                    || isClubDirector(keeperId);
+
+        allow create: if isCoachOf(keeperId)
+          && request.resource.data.repetitions is int
+          && request.resource.data.repetitions > 0
+          && inRange(request.resource.data.successRate, 0.0, 1.0);
+
+        allow update, delete: if isCoachOf(keeperId);
+      }
+
+      // --------------------------------------------------------
+      // MILESTONES — Always visible to all linked roles
+      // --------------------------------------------------------
+
+      match /milestones/{milestoneId} {
+        allow read: if isCoachOf(keeperId)
+                    || isKeeperSelf(keeperId)
+                    || isParentOf(keeperId)
+                    || isClubGoalieCoach(keeperId)
+                    || isClubDirector(keeperId);
+
+        allow create, update: if isCoachOf(keeperId);
+        allow delete: if isCoachOf(keeperId);
+      }
+
+      // --------------------------------------------------------
+      // TRAINING LOAD
+      // --------------------------------------------------------
+
+      match /trainingLoad/{weekId} {
+        allow read: if isCoachOf(keeperId) || isKeeperSelf(keeperId);
+        allow create, update: if isCoachOf(keeperId) || isKeeperSelf(keeperId);
+        allow delete: if isCoachOf(keeperId);
+      }
+
+      // --------------------------------------------------------
+      // VIDEO CLIPS (metadata — files in Cloud Storage)
+      // --------------------------------------------------------
+
+      match /videoClips/{clipId} {
+        allow read: if isCoachOf(keeperId)
+                    || isKeeperSelf(keeperId)
+                    || isClubGoalieCoach(keeperId)
+                    || isClubDirector(keeperId);
+
+        allow create: if (isCoachOf(keeperId) || isKeeperSelf(keeperId))
+          && request.resource.data.context in ['drill', 'match', 'practice']
+          && request.resource.data.fileSizeBytes is int
+          && request.resource.data.fileSizeBytes <= 524288000; // 500MB
+
+        allow update: if isCoachOf(keeperId);
+        allow delete: if isCoachOf(keeperId);
+      }
+    }
+
+    // ============================================================
+    // GLOBAL DRILL LIBRARY
+    // ============================================================
+
+    match /drills/{drillId} {
+      allow read: if isAuthenticated();
+
+      allow create: if hasRole('coach')
+        && request.resource.data.name is string
+        && request.resource.data.skillPillars is list
+        && isValidAgeGroup(request.resource.data.minAgeGroup)
+        && request.resource.data.difficulty in ['beginner', 'intermediate', 'advanced'];
+
+      allow update, delete: if hasRole('coach')
+        && resource.data.createdByCoachId == request.auth.uid;
+    }
+
+    // ============================================================
+    // CLUBS (Phase 2 — data model ready)
+    // ============================================================
+
+    match /clubs/{clubId} {
+      allow read: if isAuthenticated()
+        && exists(/databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid));
+
+      allow create: if hasRole('coach');
+      allow update: if hasRole('coach')
+        && exists(/databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid));
+
+      allow delete: if false; // Admin only
+
+      match /members/{uid} {
+        allow read: if isAuthenticated()
+          && exists(/databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid));
+        allow write: if hasRole('coach')
+          && exists(/databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid));
+      }
+    }
+
+    // ============================================================
+    // CATCH-ALL
+    // ============================================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goalie Coach - Animated Drill Library</title>
+    <style>
+        :root {
+            --bg-primary: #0B1426;
+            --bg-secondary: rgba(17, 29, 51, 0.7);
+            --bg-tertiary: #182740;
+            --accent-green: #00E676;
+            --accent-blue: #448AFF;
+            --accent-yellow: #FFD740;
+            --accent-red: #FF5252;
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0BEC5;
+            --text-tertiary: #546E7A;
+            --border-glass: rgba(255, 255, 255, 0.08);
+        }
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            padding: 16px;
+            font-size: 22px;
+            font-weight: 600;
+            text-align: center;
+            border-bottom: 1px solid var(--border-glass);
+            background: var(--bg-tertiary);
+            flex-shrink: 0;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 320px;
+            background: rgba(17, 29, 51, 0.5);
+            border-right: 1px solid var(--border-glass);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 16px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-tertiary);
+            background: rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        .drill-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-glass);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .drill-item:hover, .drill-item.active {
+            background: var(--bg-tertiary);
+            border-left: 4px solid var(--accent-green);
+        }
+        .drill-title {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+        .drill-meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .badge {
+            background: rgba(68, 138, 255, 0.15);
+            color: var(--accent-blue);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .badge.green {
+            background: rgba(0, 230, 118, 0.15);
+            color: var(--accent-green);
+        }
+        .badge.featured {
+            background: rgba(255, 215, 64, 0.2);
+            color: var(--accent-yellow);
+            border: 1px solid var(--accent-yellow);
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .field-container {
+            width: 100%;
+            max-width: 450px;
+            aspect-ratio: 3/4;
+            flex-shrink: 0;
+            background: #1B5E20;
+            border-radius: 20px;
+            border: 2px solid var(--border-glass);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+            margin-bottom: 24px;
+            transition: background 0.5s ease;
+        }
+        
+        /* Training Surface for non-field drills */
+        .field-container.at-home {
+            background: #263238; /* Neutral Concrete/Training surface */
+        }
+
+        /* Half-field has a lighter top stripe to show the field continues beyond */
+        .field-container.half-field {
+            background: linear-gradient(to bottom, #145214 0%, #1B5E20 20%);
+        }
+        
+        .field-svg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .field-container.at-home .field-lines {
+            opacity: 0;
+        }
+        
+        /* Wall UI */
+        .wall-visual {
+            position: absolute;
+            top: 5%;
+            left: 10%;
+            width: 80%;
+            height: 10px;
+            background: #78909C;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            z-index: 5;
+            display: none;
+            border: 1px solid #455A64;
+        }
+        .wall-visual::after {
+            content: 'TRAINING WALL';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #B0BEC5;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+        
+        .entity {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            transition: top 0.6s cubic-bezier(0.4, 0, 0.2, 1), left 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+            z-index: 10;
+        }
+        .goalie {
+            width: 36px;
+            height: 36px;
+            background: var(--accent-green);
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0B1426;
+            font-weight: 800;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,230,118,0.4);
+            z-index: 12;
+        }
+        .ball {
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            border: 2px solid #000;
+            box-shadow: 0 4px 12px rgba(255,255,255,0.4);
+            z-index: 13;
+        }
+        .attacker {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-red);
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 0 4px 12px rgba(255,82,82,0.4);
+            z-index: 11;
+        }
+        
+        .carousel-card {
+            width: 100%;
+            max-width: 650px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            margin-bottom: 40px;
+        }
+        
+        .carousel-header {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--accent-green);
+        }
+        .drill-pillar-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 16px;
+            display: block;
+        }
+        .carousel-desc {
+            font-size: 16px;
+            line-height: 1.5;
+            color: var(--text-primary);
+            min-height: 50px;
+            background: rgba(0,0,0,0.2);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .carousel-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .btn {
+            background: var(--bg-tertiary);
+            color: var(--accent-blue);
+            border: 1.5px solid var(--accent-blue);
+            padding: 10px 24px;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn:hover:not(:disabled) {
+            background: var(--accent-blue);
+            color: white;
+        }
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-color: var(--text-tertiary);
+            color: var(--text-tertiary);
+        }
+        
+        .step-dots {
+            display: flex;
+            gap: 10px;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--text-tertiary);
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .dot.active {
+            background: var(--accent-green);
+            transform: scale(1.3);
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+        
+        .setup-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .info-block {
+            background: rgba(255,255,255,0.03);
+            padding: 14px;
+            border-radius: 16px;
+            border: 1px solid var(--border-glass);
+        }
+        .info-title {
+            font-size: 10px;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            font-weight: 800;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+        .info-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--bg-tertiary); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<header>Goalie Coach — Drill Library Animations</header>
+
+<div class="container">
+    <div class="sidebar" id="sidebar">
+        <!-- Content injected via JS -->
+    </div>
+    
+    <div class="main-content">
+        <div class="field-container" id="field-container">
+
+            <!-- ═══ FULL FIELD SVG ═══ Both halves, center circle, both goals -->
+            <svg class="field-svg" id="svg-full-field" viewBox="0 0 100 130" preserveAspectRatio="none" style="display:none;">
+                <!-- Grass stripes (horizontal bands) -->
+                <rect x="0" y="0" width="100" height="130" fill="#196B1E"/>
+                <rect x="0" y="0"   width="100" height="13" fill="#1D7822"/>
+                <rect x="0" y="26"  width="100" height="13" fill="#1D7822"/>
+                <rect x="0" y="52"  width="100" height="13" fill="#1D7822"/>
+                <rect x="0" y="78"  width="100" height="13" fill="#1D7822"/>
+                <rect x="0" y="104" width="100" height="13" fill="#1D7822"/>
+                <!-- Field markings -->
+                <g stroke="rgba(255,255,255,0.75)" fill="none" stroke-linejoin="round">
+                    <!-- Outer boundary -->
+                    <rect x="3" y="3" width="94" height="124" stroke-width="1.2"/>
+                    <!-- Center line -->
+                    <line x1="3" y1="65" x2="97" y2="65" stroke-width="0.9"/>
+                    <!-- Center circle -->
+                    <ellipse cx="50" cy="65" rx="13" ry="10" stroke-width="0.9"/>
+                    <circle cx="50" cy="65" r="1" fill="rgba(255,255,255,0.8)"/>
+
+                    <!-- TOP END — opponent goal -->
+                    <rect x="21" y="3" width="58" height="20" stroke-width="0.8"/> <!-- penalty area -->
+                    <rect x="37" y="3" width="26" height="7"  stroke-width="0.8"/> <!-- goal box -->
+                    <circle cx="50" cy="16" r="0.9" fill="rgba(255,255,255,0.8)"/>
+                    <path d="M 40,23 A 13,11 0 0 1 60,23" stroke-width="0.8"/> <!-- penalty arc -->
+                    <!-- Goal bracket (top) -->
+                    <polyline points="43,12 43,3 57,3 57,12" stroke-width="2.5" stroke="white"/>
+                    <!-- Corner arcs (top) -->
+                    <path d="M 3,6.5 A 3.5,3.5 0 0 0 6.5,3"  stroke-width="0.8"/>
+                    <path d="M 93.5,3 A 3.5,3.5 0 0 0 97,6.5" stroke-width="0.8"/>
+
+                    <!-- BOTTOM END — keeper's goal -->
+                    <rect x="21" y="107" width="58" height="20" stroke-width="0.8"/> <!-- penalty area -->
+                    <rect x="37" y="120" width="26" height="7"  stroke-width="0.8"/> <!-- goal box -->
+                    <circle cx="50" cy="114" r="0.9" fill="rgba(255,255,255,0.8)"/>
+                    <path d="M 40,107 A 13,11 0 0 0 60,107" stroke-width="0.8"/> <!-- penalty arc -->
+                    <!-- Goal bracket (bottom) -->
+                    <polyline points="43,118 43,127 57,127 57,118" stroke-width="2.5" stroke="white"/>
+                    <!-- Corner arcs (bottom) -->
+                    <path d="M 3,123.5 A 3.5,3.5 0 0 1 6.5,127"  stroke-width="0.8"/>
+                    <path d="M 93.5,127 A 3.5,3.5 0 0 1 97,123.5" stroke-width="0.8"/>
+                </g>
+            </svg>
+
+            <!-- ═══ HALF FIELD SVG ═══ Keeper's half — halfway line to goal. Used for cross drills, long approach drills -->
+            <!-- All 3 SVGs share viewBox="0 0 100 130" so entity % positions map identically -->
+            <svg class="field-svg" id="svg-half-field" viewBox="0 0 100 130" preserveAspectRatio="none" style="display:none;">
+                <!-- Grass stripes -->
+                <rect x="0" y="0"  width="100" height="130" fill="#196B1E"/>
+                <rect x="0" y="0"  width="100" height="22"  fill="#1D7822"/>
+                <rect x="0" y="44" width="100" height="22"  fill="#1D7822"/>
+                <rect x="0" y="88" width="100" height="22"  fill="#1D7822"/>
+                <!-- Field markings -->
+                <g stroke="rgba(255,255,255,0.75)" fill="none" stroke-linejoin="round">
+                    <!-- Side lines (left & right, full height) -->
+                    <line x1="3"  y1="4" x2="3"  y2="127" stroke-width="1.2"/>
+                    <line x1="97" y1="4" x2="97" y2="127" stroke-width="1.2"/>
+                    <!-- Goal line (bottom) -->
+                    <line x1="3" y1="127" x2="97" y2="127" stroke-width="1.2"/>
+                    <!-- Halfway line (top) — dashed -->
+                    <line x1="3" y1="4" x2="97" y2="4" stroke-width="1" stroke-dasharray="4,3" stroke="rgba(255,255,255,0.4)"/>
+                    <!-- Penalty area (big box) — Penalty area is top 41% of "half" = 53 units from bottom = y=74 -->
+                    <rect x="21" y="74" width="58" height="53" stroke-width="0.9"/>
+                    <!-- Goal box (6-yd) — 14 units from bottom = y=113 -->
+                    <rect x="37" y="113" width="26" height="14" stroke-width="0.9"/>
+                    <!-- Penalty spot: 11m ≈ 27 units from goal → y=127-27=100 -->
+                    <circle cx="50" cy="100" r="1" fill="rgba(255,255,255,0.85)"/>
+                    <!-- Penalty arc — exits penalty area top at y=74 -->
+                    <path d="M 33,74 A 22,23 0 0 1 67,74" stroke-width="0.9"/>
+                    <!-- Goal bracket -->
+                    <polyline points="43,117 43,127 57,127 57,117" stroke-width="2.5" stroke="white"/>
+                    <!-- Corner arcs (bottom corners) -->
+                    <path d="M 3,123 A 4,4 0 0 1 7,127"  stroke-width="0.8"/>
+                    <path d="M 93,127 A 4,4 0 0 1 97,123" stroke-width="0.8"/>
+                </g>
+            </svg>
+
+            <!-- ═══ 1/3 FIELD SVG ═══ Defensive third only (default for most on-field drills) -->
+            <!-- Zoomed into the goalkeeper's zone. Penalty area fills most of the view. -->
+            <svg class="field-svg" id="svg-third-field" viewBox="0 0 100 130" preserveAspectRatio="none">
+                <!-- Grass stripes (3 wide bands) -->
+                <rect x="0" y="0"  width="100" height="130" fill="#196B1E"/>
+                <rect x="0" y="0"  width="100" height="43"  fill="#1D7822"/>
+                <rect x="0" y="87" width="100" height="43"  fill="#1D7822"/>
+                <!-- Field markings -->
+                <g stroke="rgba(255,255,255,0.75)" fill="none" stroke-linejoin="round">
+                    <!-- Side lines (left & right) -->
+                    <line x1="3"  y1="4" x2="3"  y2="127" stroke-width="1.2"/>
+                    <line x1="97" y1="4" x2="97" y2="127" stroke-width="1.2"/>
+                    <!-- Goal line (bottom) -->
+                    <line x1="3" y1="127" x2="97" y2="127" stroke-width="1.2"/>
+                    <!-- Top edge of 1/3 zone — dashed -->
+                    <line x1="3" y1="4" x2="97" y2="4" stroke-width="1" stroke-dasharray="4,3" stroke="rgba(255,255,255,0.35)"/>
+                    <!-- Penalty area (big box) — scaled to 1/3: ~61 units deep → y=127-61=66 -->
+                    <rect x="21" y="66" width="58" height="61" stroke-width="1"/>
+                    <!-- Goal box (6-yd box) — 20 units deep → y=107 -->
+                    <rect x="37" y="107" width="26" height="20" stroke-width="1"/>
+                    <!-- Penalty spot: ~41 units from goal → y=127-41=86 -->
+                    <circle cx="50" cy="86" r="1.2" fill="rgba(255,255,255,0.9)"/>
+                    <!-- Penalty arc — wide arc at y=66 (top of penalty area) -->
+                    <path d="M 23,66 A 34,34 0 0 1 77,66" stroke-width="1"/>
+                    <!-- Goal bracket (keeper's goal) -->
+                    <polyline points="43,113 43,127 57,127 57,113" stroke-width="3" stroke="white"/>
+                    <!-- Corner arcs (bottom) -->
+                    <path d="M 3,122 A 5,5 0 0 1 8,127"  stroke-width="0.9"/>
+                    <path d="M 92,127 A 5,5 0 0 1 97,122" stroke-width="0.9"/>
+                </g>
+            </svg>
+
+            <!-- Environment / Field Type label -->
+            <div id="field-label" style="position:absolute;top:8px;right:8px;z-index:20;background:rgba(0,0,0,0.4);color:rgba(255,255,255,0.8);font-size:9px;font-weight:700;padding:3px 9px;border-radius:8px;letter-spacing:0.5px;">⚽ 1/3 Field</div>
+
+            <div id="wall-ui" class="wall-visual"></div>
+            
+            <div id="ent-goalie" class="entity goalie" style="top: 95%; left: 50%; opacity: 0; display: none;">GK</div>
+            <div id="ent-ball" class="entity ball" style="top: 60%; left: 50%; opacity: 0; display: none;"></div>
+            
+            <!-- Dynamic Attackers Container -->
+            <div id="attackers-container"></div>
+        </div>
+
+
+
+        
+        <div class="carousel-card">
+            <span class="drill-pillar-label" id="c-pillar">Pillar Name</span>
+            <div class="carousel-header" id="c-title">Drill Name</div>
+            
+            <div class="carousel-desc" id="c-desc">Step description goes here.</div>
+            
+            <div class="carousel-controls">
+                <button class="btn" id="btn-prev" onclick="prevStep()">&larr; Back</button>
+                <div class="step-dots" id="c-dots"></div>
+                <button class="btn" id="btn-next" onclick="nextStep()">Next &rarr;</button>
+            </div>
+
+            <div class="setup-section">
+                <div class="info-block">
+                    <div class="info-title">Equipment / Setup</div>
+                    <div class="info-text" id="c-setup">Setup details...</div>
+                </div>
+                <div class="info-block">
+                    <div class="info-title">Volume (Sets/Reps)</div>
+                    <div class="info-text" id="c-volume">Volume details...</div>
+                </div>
+                <div class="info-block">
+                    <div class="info-title">Focus Points</div>
+                    <div class="info-text" id="c-focus">Focus points...</div>
+                </div>
+                <div class="info-block">
+                    <div class="info-title">Variation (Make it Harder)</div>
+                    <div class="info-text" id="c-variation">Variation details...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const drillsData = [{"id": "SHOT_STOPPING_U8-U10_1", "pillar": "SHOT STOPPING", "age_group": "U8-U10", "name": "Wall Ball Catch", "type": "\ud83c\udfe0", "setup": "Ball, wall", "steps": "Stand 3\u20135 ft from wall. Throw against wall at varying heights. Catch with W or Basket hands.", "focus": "Hands early to ball, eyes track ball into gloves, move feet to get body behind.", "volume": "3 sets of 20 catches.", "variation": "**Harder:** Use a tennis ball or decrease distance to wall.", "is_wall": true, "animation": [{"desc": "Ready position facing wall", "goalie": [50, 90], "ball": [50, 85], "attacker": null}, {"desc": "Throw ball at wall", "goalie": [50, 90], "ball": [50, 10], "attacker": null}, {"desc": "Ball rebounds", "goalie": [50, 90], "ball": [50, 60], "attacker": null}, {"desc": "Catch/Receive contribution", "goalie": [50, 90], "ball": [50, 90], "attacker": null}]}, {"id": "SHOT_STOPPING_U8-U10_2", "pillar": "SHOT STOPPING", "age_group": "U8-U10", "name": "Coach Roll & Catch", "type": "\ud83d\udc65", "setup": "Ball, cones", "steps": "Coach rolls ball firmly to left, right, and center from 6 yards. Keeper gets set, moves, scoops.", "focus": "Ready position, shuffle to get behind ball, secure scoop technique.", "volume": "10 reps each side (left/center/right).", "variation": "**Harder:** Coach increases speed of roll or adds a second ball.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "SHOT_STOPPING_U8-U10_3", "pillar": "SHOT STOPPING", "age_group": "U8-U10", "name": "Rainbow Catching", "type": "\ud83d\udc65", "setup": "Ball", "steps": "Coach lobs ball gently (underhand) to different heights \u2014 waist, chest, head height.", "focus": "Correct hand shape for height (W vs Basket), stable base, high catch point.", "volume": "15 lobs per set.", "variation": "**Harder:** Keeper starts with back to coach, turns on command \"Ball!\" and reacts.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "SHOT_STOPPING_U11-U13_1", "pillar": "SHOT STOPPING", "age_group": "U11-U13", "name": "Wall Rapid Fire", "type": "\ud83c\udfe0", "setup": "Ball, wall", "steps": "Stand 4\u20136 ft from wall. Throw hard, catch, touch ground, repeat.", "focus": "Quick hands, soft catch, rapid recovery to set position.", "volume": "3 sets of 45 seconds.", "variation": "**Harder:** Stand on one leg or use a smaller ball (e.g. tennis ball).", "is_wall": true, "animation": [{"desc": "Ready position facing wall", "goalie": [50, 90], "ball": [50, 85], "attacker": null}, {"desc": "Throw ball at wall", "goalie": [50, 90], "ball": [50, 10], "attacker": null}, {"desc": "Ball rebounds", "goalie": [50, 90], "ball": [50, 60], "attacker": null}, {"desc": "Catch/Receive contribution", "goalie": [50, 90], "ball": [50, 90], "attacker": null}]}, {"id": "SHOT_STOPPING_U11-U13_2", "pillar": "SHOT STOPPING", "age_group": "U11-U13", "name": "Collapse Dive Progression", "type": "\ud83d\udc65", "setup": "Ball, mat optional", "steps": "**Phase 1-3:** Kneeling, standing low, shuffle + low save.", "focus": "Sequence: thigh \u2192 hip \u2192 torso. Bottom hand behind ball.", "volume": "8 reps each side per phase.", "variation": "**Harder:** Add a second ball for a 'double save' scenario.", "is_wall": false, "animation": [{"desc": "Phase 1: Kneeling Save. Attacker serves low.", "goalie": [50, 96], "ball": [50, 70], "attacker": [50, 50]}, {"desc": "Goalie collapses to collect at knee height.", "goalie": [60, 96], "ball": [60, 96], "attacker": [50, 50]}, {"desc": "Phase 2: Standing. Attacker serves to left.", "goalie": [50, 95], "ball": [50, 70], "attacker": [50, 50]}, {"desc": "Goalie performs full collapse dive to left.", "goalie": [35, 95], "ball": [35, 95], "attacker": [50, 50]}, {"desc": "Phase 3: Shuffle and Dive. Goalie shuffles right first.", "goalie": [60, 95], "ball": [50, 50], "attacker": [50, 50]}, {"desc": "Attacker serves wide right, goalie dives to save.", "goalie": [75, 95], "ball": [75, 95], "attacker": [50, 50]}]}, {"id": "SHOT_STOPPING_U11-U13_3", "pillar": "SHOT STOPPING", "age_group": "U11-U13", "name": "Angle Closing & Save", "type": "\ud83d\udc65", "setup": "Ball, cones (goal), 3 spots", "steps": "Set up 3 cones in triangle. Adjust angle for spot called, then save.", "focus": "Repositioning footwork, getting \"Set\" (feet still & balanced) before shot. **Recover to Center**: Get back to the middle of the goal between shots.", "volume": "12 total reps (4 per spot).", "variation": "**Harder:** Strikers can pass between each other before the shot.", "is_wall": false, "animation": [{"desc": "Ball at center. Goalie in ready position.", "goalie": [50, 95], "ball": [50, 60], "attackers": [[50, 50]]}, {"desc": "Attacker passes to wide spot. Goalie must shuffle to stay on the line between ball and center goal.", "goalie": [50, 95], "ball": [20, 65], "attackers": [[50, 50]]}, {"desc": "Goalie shuffles to close down the new angle. Get 'Set' (feet still and balanced) before the shot.", "goalie": [35, 90], "ball": [20, 65], "attackers": [[20, 55]]}, {"desc": "Save made at the near angle. Recover to Center: Get back to the middle of the goal to prepare for the next play.", "goalie": [25, 88], "ball": [25, 88], "attackers": [[20, 55]]}]}, {"id": "SHOT_STOPPING_U14-U16_1", "pillar": "SHOT STOPPING", "age_group": "U14-U16", "name": "Reaction Ball Wall Drill", "type": "\ud83c\udfe0", "setup": "Reaction ball, wall \u26bd", "steps": "Stand 6\u20138 ft from wall. Throw reaction ball \u2014 react and catch/parry.", "focus": "peripheral vision, stay balanced, hand speed, react to bounce.", "volume": "4 sets of 45 seconds.", "variation": "**Harder:** Step closer to the wall (faster reaction needed).", "is_wall": true, "animation": [{"desc": "Ready position 6-8ft from wall.", "goalie": [50, 90], "ball": [50, 85], "attacker": null}, {"desc": "Throw reaction ball - unpredictable bounce.", "goalie": [50, 90], "ball": [50, 5], "attacker": null}, {"desc": "Ball rebounds at sharp angle right.", "goalie": [50, 90], "ball": [70, 40], "attacker": null}, {"desc": "Goalie reacts and makes save to the right.", "goalie": [70, 85], "ball": [70, 85], "attacker": null}]}, {"id": "SHOT_STOPPING_U14-U16_2", "pillar": "SHOT STOPPING", "age_group": "U14-U16", "name": "Extension Dive Series", "type": "\ud83d\udc65", "setup": "Ball, full goal", "steps": "Coach serves from 12 yards to corners \u2014 make full extension dives.", "focus": "Power step explosiveness, fingertip contact on far saves, safe landing.", "volume": "4 sets of 6 saves (alt sides).", "variation": "**Harder:** Add a low hurdle to jump over before the dive.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "SHOT_STOPPING_U14-U16_3", "pillar": "SHOT STOPPING", "age_group": "U14-U16", "name": "Deflection & Second Ball", "type": "\ud83d\udc65", "setup": "2 balls, goal, 2 servers", "steps": "Server 1 shoots \u2014 save/parry. Server 2 immediately shoots rebound.", "focus": "Parry direction (away from goal). **Recover to Center**: Quickly find the middle of the goal before shot 2.", "volume": "10 rounds (20 shots total).", "variation": "**Harder:** Server 2 moves to change the angle before their second shot.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "SHOT_STOPPING_U17-U18_1", "pillar": "SHOT STOPPING", "age_group": "U17-U18", "name": "Shadow Diving Visualization", "type": "\ud83c\udfe0", "setup": "Soft surface", "steps": "Start in ready pos. Visualize a shot \u2014 execute a full dive. Reset.", "focus": "Explosive first step, dive shape, smooth landing, recovery speed.", "volume": "5 sets of 6 dives.", "variation": "**Harder:** Film yourself and review technique between sets.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "SHOT_STOPPING_U17-U18_2", "pillar": "SHOT STOPPING", "age_group": "U17-U18", "name": "Game-Speed Shot Circuit", "type": "\ud83d\udc65", "setup": "Balls, goal, 3 shooters \u26bd", "steps": "Shooters at edges of 18 and penalty spot. Face rapid shots.", "focus": "Repositioning speed, reading shooters. **Recover to Center**: Find the middle of the goal between shooters.", "volume": "4 rounds of 8 shots.", "variation": "**Harder:** Shooters can pass between each other before the shot.", "is_wall": false, "animation": [{"desc": "Three shooters (1-3) ready at different boxes. Goalie is 'Set' for Shooter 1.", "goalie": [50, 95], "ball": [50, 60], "attackers": [[50, 50], [20, 55], [80, 55]]}, {"desc": "Shooter 1 takes shot. Save and hold or parry away.", "goalie": [50, 93], "ball": [50, 93], "attackers": [[50, 50], [20, 55], [80, 55]]}, {"desc": "Recover to Center: Quickly find the middle of the goal, then rotate to face Shooter 2.", "goalie": [50, 95], "ball": [20, 65], "attackers": [[50, 50], [20, 55], [80, 55]]}, {"desc": "Shooter 2 takes shot. Adjust angle and get 'Set' quickly.", "goalie": [35, 90], "ball": [35, 90], "attackers": [[50, 50], [20, 55], [80, 55]]}, {"desc": "Rotate to face Shooter 3. Footwork must be sharp (small, fast steps).", "goalie": [50, 95], "ball": [80, 55], "attackers": [[50, 50], [20, 55], [80, 55]]}, {"desc": "Final save on Shooter 3. Concentration under fatigue is key!", "goalie": [65, 92], "ball": [65, 92], "attackers": [[50, 50], [20, 55], [80, 55]]}]}, {"id": "SHOT_STOPPING_U17-U18_3", "pillar": "SHOT STOPPING", "age_group": "U17-U18", "name": "xG Save Challenge", "type": "\ud83d\udc65", "setup": "Balls, goal, data sheet \u26bd", "steps": "Coach assigns xG values to shots. Target: Beat the xG score.", "focus": "Statistical performance, mental composure, high-xG saves.", "volume": "2 sets of 20 shots.", "variation": "**Harder:** Use a rebound board for unpredictable deflections.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "CROSSES_&_HIGH_BALLS_U11-U13_1", "pillar": "CROSSES & HIGH BALLS", "age_group": "U11-U13", "name": "Wall Toss & Catch High", "type": "\ud83c\udfe0", "setup": "Ball, high wall", "steps": "Throw ball high against wall. Jump, catch at peak, land secure.", "focus": "Timing of jump, secure W-hands at peak, land on both feet.", "volume": "3 sets of 15 catches.", "variation": "**Harder:** Add a 1-step approach jump before catching.", "is_wall": true, "animation": [{"desc": "Starting position facing high wall.", "goalie": [50, 90], "ball": [50, 85], "attacker": null}, {"desc": "Throw ball high against wall.", "goalie": [50, 90], "ball": [50, 10], "attacker": null}, {"desc": "Jump and catch at peak height.", "goalie": [50, 40], "ball": [50, 40], "attacker": null}, {"desc": "Land securely in ready position.", "goalie": [50, 90], "ball": [50, 90], "attacker": null}]}, {"id": "CROSSES_&_HIGH_BALLS_U11-U13_2", "pillar": "CROSSES & HIGH BALLS", "age_group": "U11-U13", "name": "Simple Cross Claiming", "type": "\ud83d\udc65", "setup": "Ball, goal, 1 server", "steps": "Server delivers looping crosses. Keeper starts on line, comes to catch.", "focus": "Decision to come, footwork to meeting point, claiming at max height.", "volume": "12 reps (6 per side).", "variation": "**Harder:** Server adds more pace or lower trajectory to the cross.", "is_wall": false, "animation": [{"desc": "Starting position off the line", "goalie": [50, 90], "ball": [10, 30], "attacker": [50, 70]}, {"desc": "Cross is delivered", "goalie": [50, 90], "ball": [50, 75], "attacker": [50, 75]}, {"desc": "Goalie attacks the ball", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}, {"desc": "Claim ball at peak", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}]}, {"id": "CROSSES_&_HIGH_BALLS_U11-U13_3", "pillar": "CROSSES & HIGH BALLS", "age_group": "U11-U13", "name": "Coach Lob Challenge", "type": "\ud83d\udc65", "setup": "Ball", "steps": "Coach tosses from various angles. Keeper adjusts feet and catches.", "focus": "Getting feet set under the ball, secure handling, body balance.", "volume": "15 reps.", "variation": "**Harder:** Keeper starts facing the goal, turns on \"Keeper!\" call.", "is_wall": false, "animation": [{"desc": "Starting position off the line", "goalie": [50, 90], "ball": [10, 30], "attacker": [50, 70]}, {"desc": "Cross is delivered", "goalie": [50, 90], "ball": [50, 75], "attacker": [50, 75]}, {"desc": "Goalie attacks the ball", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}, {"desc": "Claim ball at peak", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}]}, {"id": "CROSSES_&_HIGH_BALLS_U14-U16_1", "pillar": "CROSSES & HIGH BALLS", "age_group": "U14-U16", "name": "Overhead Throw & Catch Solo", "type": "\ud83c\udfe0", "setup": "Ball, open space", "steps": "Throw ball as high as possible. Move under, time jump, catch at peak.", "focus": "Tracking ball flight, timing approach, knee-up for protection.", "volume": "3 sets of 12 reps.", "variation": "**Harder:** Throw ball slightly forward/backward to force movement.", "is_wall": false, "animation": [{"desc": "Starting position off the line", "goalie": [50, 90], "ball": [10, 30], "attacker": [50, 70]}, {"desc": "Cross is delivered", "goalie": [50, 90], "ball": [50, 75], "attacker": [50, 75]}, {"desc": "Goalie attacks the ball", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}, {"desc": "Claim ball at peak", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}]}, {"id": "CROSSES_&_HIGH_BALLS_U14-U16_2", "pillar": "CROSSES & HIGH BALLS", "age_group": "U14-U16", "name": "Cross Claiming Under Pressure", "type": "\ud83d\udc65", "setup": "Ball, goal, server, 2 attackers \u26bd", "steps": "Server delivers crosses. Attackers challenge (passive/active).", "focus": "Decision (come/stay), internal \"Keeper!\" call, technique in traffic.", "volume": "15 reps from each side.", "variation": "**Harder:** Add defenders to make the box more crowded.", "is_wall": false, "animation": [{"desc": "Starting position off the line", "goalie": [50, 90], "ball": [10, 30], "attacker": [50, 70]}, {"desc": "Cross is delivered", "goalie": [50, 90], "ball": [50, 75], "attacker": [50, 75]}, {"desc": "Goalie attacks the ball", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}, {"desc": "Claim ball at peak", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}]}, {"id": "CROSSES_&_HIGH_BALLS_U14-U16_3", "pillar": "CROSSES & HIGH BALLS", "age_group": "U14-U16", "name": "Punch Drill \u2014 Directional", "type": "\ud83d\udc65", "setup": "Ball, goal, target cones \u26bd", "steps": "Punches too high/far to catch. Punch to target zones (wide).", "focus": "Fist form (flat surface), punch distance, clearing to safety.", "volume": "10 reps per side.", "variation": "**Harder:** Coach uses a tennis racket to serve faster balls.", "is_wall": false, "animation": [{"desc": "Starting position off the line", "goalie": [50, 90], "ball": [10, 30], "attacker": [50, 70]}, {"desc": "Cross is delivered", "goalie": [50, 90], "ball": [50, 75], "attacker": [50, 75]}, {"desc": "Goalie attacks the ball", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}, {"desc": "Claim ball at peak", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}]}, {"id": "CROSSES_&_HIGH_BALLS_U17-U18_1", "pillar": "CROSSES & HIGH BALLS", "age_group": "U17-U18", "name": "Jump & Catch Plyometrics", "type": "\ud83c\udfe0", "setup": "Ball, soft surface \u26bd", "steps": "Self-toss high. Box/broad jump before exploding up to catch.", "focus": "Explosiveness from jump, timing of reach, secure landing.", "volume": "4 sets of 8 reps.", "variation": "**Harder:** Carry light medicine ball (2kg) for the initial jump.", "is_wall": false, "animation": [{"desc": "Starting position off the line", "goalie": [50, 90], "ball": [10, 30], "attacker": [50, 70]}, {"desc": "Cross is delivered", "goalie": [50, 90], "ball": [50, 75], "attacker": [50, 75]}, {"desc": "Goalie attacks the ball", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}, {"desc": "Claim ball at peak", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}]}, {"id": "CROSSES_&_HIGH_BALLS_U17-U18_2", "pillar": "CROSSES & HIGH BALLS", "age_group": "U17-U18", "name": "Game-Realistic Cross Circuit", "type": "\ud83d\udc65", "setup": "Goal, 2 servers, attackers \u26bd", "steps": "Alternate crosses from both flanks into 'chaos' in the box.", "focus": "Decision speed, communication, organizing the 'mess' in front.", "volume": "20 total crosses.", "variation": "**Harder:** Add extra balls for immediate \"second ball\" recovery.", "is_wall": false, "animation": [{"desc": "Service from Left Wing (Server 1). Attackers (2-3) move into the box.", "goalie": [50, 90], "ball": [10, 50], "attackers": [[10, 45], [50, 70], [60, 75]]}, {"desc": "Cross is delivered. Goalie must decide: 'Keeper!' (catch/punch) or 'Away!' (let defense handle).", "goalie": [50, 90], "ball": [50, 75], "attackers": [[10, 45], [55, 75], [65, 80]]}, {"desc": "Claim ball at the highest point. Protect yourself with your knee up.", "goalie": [55, 75], "ball": [55, 75], "attackers": [[10, 45], [55, 75], [65, 80]]}, {"desc": "Immediate second ball! Server 2 crosses from the Right Wing.", "goalie": [50, 85], "ball": [90, 50], "attackers": [[55, 80], [65, 85], [10, 45]]}]}, {"id": "CROSSES_&_HIGH_BALLS_U17-U18_3", "pillar": "CROSSES & HIGH BALLS", "age_group": "U17-U18", "name": "Corner Kick Management", "type": "\ud83d\udc65", "setup": "Goal, full corner setup \u26bd", "steps": "Deal with in/out swingers and short corners in a full-team setting.", "focus": "Starting position, leadership, organizing the defensive block.", "volume": "12 corners total.", "variation": "**Harder:** Add a 'screens' player to block the keeper's view.", "is_wall": false, "animation": [{"desc": "Starting position off the line", "goalie": [50, 90], "ball": [10, 30], "attacker": [50, 70]}, {"desc": "Cross is delivered", "goalie": [50, 90], "ball": [50, 75], "attacker": [50, 75]}, {"desc": "Goalie attacks the ball", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}, {"desc": "Claim ball at peak", "goalie": [50, 75], "ball": [50, 75], "attacker": [45, 75]}]}, {"id": "1V1_&_BREAKAWAY_SITUATIONS_U11-U13_1", "pillar": "1V1 & BREAKAWAY SITUATIONS", "age_group": "U11-U13", "name": "Mirror Shuffle Drill", "type": "\ud83c\udfe0", "setup": "Mirror/Space", "steps": "Shuffle left/right/back and forward. Get \"big\" on command.", "focus": "Ready position, balance while moving, explosive \"set.\"", "volume": "3 sets of 2 minutes.", "variation": "**Harder:** Use a partner to give visual cues instead of a mirror.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "1V1_&_BREAKAWAY_SITUATIONS_U11-U13_2", "pillar": "1V1 & BREAKAWAY SITUATIONS", "age_group": "U11-U13", "name": "1v1 Approach Drill", "type": "\ud83d\udc65", "setup": "Ball, cones \u26bd", "steps": "Attacker dribbles. Keeper practices approach/closing the angle.", "focus": "Timing of advance, closing space, distance when getting set.", "volume": "8-10 reps.", "variation": "**Harder:** Attacker can change speed or direction mid-dribble.", "is_wall": false, "animation": [{"desc": "Attacker starts at 25 yards. Goalie on line.", "goalie": [50, 98], "ball": [50, 40], "attacker": [50, 40]}, {"desc": "Attacker advances. Goalie closes the space early.", "goalie": [50, 85], "ball": [50, 60], "attacker": [50, 60]}, {"desc": "Attacker enters penalty area. Goalie slows to 'Set'.", "goalie": [50, 78], "ball": [50, 70], "attacker": [50, 70]}, {"desc": "Goalie gets 'Big' - low, wide arms, balanced.", "goalie": [50, 75], "ball": [50, 72], "attacker": [50, 72]}]}, {"id": "1V1_&_BREAKAWAY_SITUATIONS_U11-U13_3", "pillar": "1V1 & BREAKAWAY SITUATIONS", "age_group": "U11-U13", "name": "1v1 Live \u2014 Stay Feet", "type": "\ud83d\udc65", "setup": "Ball, goal, 1 attacker", "steps": "Attacker goes 1v1. Keeper must stay on feet as long as possible.", "focus": "Patience, reading the striker, explosive save only when shot is taken.", "volume": "10 reps.", "variation": "**Harder:** Start with keeper at one post (side approach).", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "1V1_&_BREAKAWAY_SITUATIONS_U14-U16_1", "pillar": "1V1 & BREAKAWAY SITUATIONS", "age_group": "U14-U16", "name": "Spread Save Shadow Work", "type": "\ud83c\udfe0", "setup": "Soft surface", "steps": "Practice the star-shape spread save technique without a ball.", "focus": "Making self wide, head steady, hand position (fingers splayed).", "volume": "4 sets of 8 reps.", "variation": "**Harder:** Add a low hurdle to hop over before dropping into spread.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "1V1_&_BREAKAWAY_SITUATIONS_U14-U16_2", "pillar": "1V1 & BREAKAWAY SITUATIONS", "age_group": "U14-U16", "name": "Rush & Retreat Decision", "type": "\ud83d\udc65", "setup": "Ball, goal, 2 attackers \u26bd", "steps": "Attacker 1 rushes; if they pass, keeper must retreat and reset for Attacker 2.", "focus": "Rush timing, reading the pass, reset speed for shot 2.", "volume": "10 total reps.", "variation": "**Harder:** Attacker 1 can shoot OR pass to keep keeper guessing.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "1V1_&_BREAKAWAY_SITUATIONS_U14-U16_3", "pillar": "1V1 & BREAKAWAY SITUATIONS", "age_group": "U14-U16", "name": "1v1 Competition", "type": "\ud83d\udc65", "setup": "Ball, goal, multiple attackers", "steps": "Live 1v1 mini-tournament. Track points for saves vs goals.", "focus": "Competitive composure, handling different striker styles.", "volume": "10-15 live reps.", "variation": "**Harder:** Start keeper with back to play (reaction start).", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "1V1_&_BREAKAWAY_SITUATIONS_U17-U18_1", "pillar": "1V1 & BREAKAWAY SITUATIONS", "age_group": "U17-U18", "name": "Video Analysis & Viz", "type": "\ud83c\udfe0", "setup": "Phone/Tablet", "steps": "Review breakaway clips. Pause and call out your action, then visualize.", "focus": "Analytical thinking, decision awareness, visualization discipline.", "volume": "6 clips per session.", "variation": "**Harder:** Record yourself explaining your decision to \"coach\" others.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "1V1_&_BREAKAWAY_SITUATIONS_U17-U18_2", "pillar": "1V1 & BREAKAWAY SITUATIONS", "age_group": "U17-U18", "name": "Through-Ball Sweeping", "type": "\ud83d\udc65", "setup": "Goal, servers, attacker \u26bd", "steps": "Midfielder plays through-balls. Decide: sweep (intercept) or hold (1v1).", "focus": "Reading ball speed, decision speed, distribution after sweep.", "volume": "12 reps.", "variation": "**Harder:** Midfielder can shoot directly if keeper is too far off line.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "1V1_&_BREAKAWAY_SITUATIONS_U17-U18_3", "pillar": "1V1 & BREAKAWAY SITUATIONS", "age_group": "U17-U18", "name": "Penalty Shootout Sim", "type": "\ud83d\udc65", "setup": "Full goal, 5 shooters", "steps": "Full penalty simulation. Study shooter's body cues before they strike.", "focus": "Reading cues, dive timing, staying big and central.", "volume": "10-15 penalties.", "variation": "**Harder:** Use headphones with crowd noise to simulate pressure.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "DISTRIBUTION_U8-U10_1", "pillar": "DISTRIBUTION", "age_group": "U8-U10", "name": "Wall Passing", "type": "\ud83c\udfe0", "setup": "Ball, wall", "steps": "Stand 8\u201310 ft from wall. Roll ball firmly at target. Catch return.", "focus": "Bowling technique, follow-through, accuracy, soft hands on return.", "volume": "3 sets of 15 rolls per hand.", "variation": "**Harder:** Use a smaller ball or increase the bowling distance.", "is_wall": true, "animation": [{"desc": "Ready position facing wall", "goalie": [50, 90], "ball": [50, 85], "attacker": null}, {"desc": "Throw ball at wall", "goalie": [50, 90], "ball": [50, 10], "attacker": null}, {"desc": "Ball rebounds", "goalie": [50, 90], "ball": [50, 60], "attacker": null}, {"desc": "Catch/Receive contribution", "goalie": [50, 90], "ball": [50, 90], "attacker": null}]}, {"id": "DISTRIBUTION_U8-U10_2", "pillar": "DISTRIBUTION", "age_group": "U8-U10", "name": "Target Roll Game", "type": "\ud83d\udc65", "setup": "Ball, 4 cones \u26bd", "steps": "Set 4 targets at 5\u201315 yards. Roll ball to hit each target.", "focus": "Weight of pass, stepping into the roll, scanning targets.", "volume": "3 rounds of all 4 targets.", "variation": "**Harder:** Add a time limit (e.g., hit all 4 in 15 seconds).", "is_wall": false, "animation": [{"desc": "Prepare to distribute", "goalie": [50, 85], "ball": [50, 85], "attacker": null}, {"desc": "Scan for targets", "goalie": [50, 80], "ball": [50, 80], "attacker": null}, {"desc": "Distribute accurately", "goalie": [50, 80], "ball": [80, 20], "attacker": null}, {"desc": "Target receives ball", "goalie": [50, 80], "ball": [80, 20], "attacker": null}]}, {"id": "DISTRIBUTION_U8-U10_3", "pillar": "DISTRIBUTION", "age_group": "U8-U10", "name": "Short-Pass Triangle", "type": "\ud83d\udc65", "setup": "Ball, 2 mates \u26bd", "steps": "Keeper + 2 players in triangle (10yd). Receive, touch, pass.", "focus": "First touch quality, head up before pass, pass accuracy (feet).", "volume": "3 sets of 3 minutes.", "variation": "**Harder:** One-touch only or increase spacing to 15 yards.", "is_wall": false, "animation": [{"desc": "Prepare to distribute", "goalie": [50, 85], "ball": [50, 85], "attacker": null}, {"desc": "Scan for targets", "goalie": [50, 80], "ball": [50, 80], "attacker": null}, {"desc": "Distribute accurately", "goalie": [50, 80], "ball": [80, 20], "attacker": null}, {"desc": "Target receives ball", "goalie": [50, 80], "ball": [80, 20], "attacker": null}]}, {"id": "DISTRIBUTION_U11-U13_1", "pillar": "DISTRIBUTION", "age_group": "U11-U13", "name": "Overarm Throw Accuracy", "type": "\ud83c\udfe0", "setup": "Ball, wall \u26bd", "steps": "Mark targets at different heights. Throw javelin-style at marks.", "focus": "Throwing form, stepping into target, arm extension, power.", "volume": "3 sets of 10 throws.", "variation": "**Harder:** Increase distance or try throwing with your weak hand.", "is_wall": true, "animation": [{"desc": "Ready position facing wall", "goalie": [50, 90], "ball": [50, 85], "attacker": null}, {"desc": "Throw ball at wall", "goalie": [50, 90], "ball": [50, 10], "attacker": null}, {"desc": "Ball rebounds", "goalie": [50, 90], "ball": [50, 60], "attacker": null}, {"desc": "Catch/Receive contribution", "goalie": [50, 90], "ball": [50, 90], "attacker": null}]}, {"id": "DISTRIBUTION_U11-U13_2", "pillar": "DISTRIBUTION", "age_group": "U11-U13", "name": "Goal Kick Technique", "type": "\ud83d\udc65", "setup": "Balls, goal \u26bd", "steps": "3 target zones (30, 40, 50 yd). Practice striking to zones.", "focus": "Plant foot position, contact point (middle/bottom), trajectory.", "volume": "15 total kicks (5 per zone).", "variation": "**Harder:** Practice goal kicks into a gentle headwind.", "is_wall": false, "animation": [{"desc": "Prepare to distribute", "goalie": [50, 85], "ball": [50, 85], "attacker": null}, {"desc": "Scan for targets", "goalie": [50, 80], "ball": [50, 80], "attacker": null}, {"desc": "Distribute accurately", "goalie": [50, 80], "ball": [80, 20], "attacker": null}, {"desc": "Target receives ball", "goalie": [50, 80], "ball": [80, 20], "attacker": null}]}, {"id": "DISTRIBUTION_U11-U13_3", "pillar": "DISTRIBUTION", "age_group": "U11-U13", "name": "Distribution Decision Game", "type": "\ud83d\udc65", "setup": "Ball, goal, 4 mates \u26bd", "steps": "Save ball, then distribute in 6s. 4 targets, 2 pressers.", "focus": "Scanning before save, decision speed, accuracy under pressure.", "volume": "12 total reps.", "variation": "**Harder:** Pressers start closer to the keeper (higher pressure).", "is_wall": false, "animation": [{"desc": "Goalie claims ball. Identify 4 targets (points 1-4).", "goalie": [50, 90], "ball": [50, 90], "attacker": [40, 60]}, {"desc": "Presser closes channel to Target 1 (left).", "goalie": [50, 85], "ball": [50, 85], "attacker": [45, 80]}, {"desc": "Goalie scans and finds open Target 2 (right).", "goalie": [50, 85], "ball": [50, 85], "attacker": [45, 80]}, {"desc": "Accurate distribution to Target 2.", "goalie": [50, 85], "ball": [80, 70], "attacker": [45, 80]}]}, {"id": "DISTRIBUTION_U14-U16_1", "pillar": "DISTRIBUTION", "age_group": "U14-U16", "name": "Driven Pass Against Wall", "type": "\ud83c\udfe0", "setup": "Ball, wall \u26bd", "steps": "Stand 15\u201325 yd. Driven goal kicks/half-volleys through 2ft gate.", "focus": "Striking technique (laced), ball flight, accuracy, consistency.", "volume": "3 sets of 10 kicks.", "variation": "**Harder:** Narrow the gate to 1 foot or increase distance to 30 yards.", "is_wall": true, "animation": [{"desc": "Ready position facing wall", "goalie": [50, 90], "ball": [50, 85], "attacker": null}, {"desc": "Throw ball at wall", "goalie": [50, 90], "ball": [50, 10], "attacker": null}, {"desc": "Ball rebounds", "goalie": [50, 90], "ball": [50, 60], "attacker": null}, {"desc": "Catch/Receive contribution", "goalie": [50, 90], "ball": [50, 90], "attacker": null}]}, {"id": "DISTRIBUTION_U14-U16_2", "pillar": "DISTRIBUTION", "age_group": "U14-U16", "name": "Counter-Attack Throw", "type": "\ud83d\udc65", "setup": "Ball, goal, runners \u26bd", "steps": "Save, then immediately throw to 3 runners at varying distances.", "focus": "Decision speed, accuracy leading the runner, selecting right target.", "volume": "12 total reps.", "variation": "**Harder:** Runners can change direction mid-sprint.", "is_wall": false, "animation": [{"desc": "Prepare to distribute", "goalie": [50, 85], "ball": [50, 85], "attacker": null}, {"desc": "Scan for targets", "goalie": [50, 80], "ball": [50, 80], "attacker": null}, {"desc": "Distribute accurately", "goalie": [50, 80], "ball": [80, 20], "attacker": null}, {"desc": "Target receives ball", "goalie": [50, 80], "ball": [80, 20], "attacker": null}]}, {"id": "DISTRIBUTION_U14-U16_3", "pillar": "DISTRIBUTION", "age_group": "U14-U16", "name": "Build from Back \u2014 Press", "type": "\ud83d\udc65", "setup": "Ball, goal, defenders \u26bd", "steps": "Play out from 18 under press from 2\u20133 opponents. Composure.", "focus": "Composure, first touch direction, pass accuracy, scanning.", "volume": "10 total reps.", "variation": "**Harder:** Add an extra striker to increase the press intensity.", "is_wall": false, "animation": [{"desc": "Prepare to distribute", "goalie": [50, 85], "ball": [50, 85], "attacker": null}, {"desc": "Scan for targets", "goalie": [50, 80], "ball": [50, 80], "attacker": null}, {"desc": "Distribute accurately", "goalie": [50, 80], "ball": [80, 20], "attacker": null}, {"desc": "Target receives ball", "goalie": [50, 80], "ball": [80, 20], "attacker": null}]}, {"id": "DISTRIBUTION_U17-U18_1", "pillar": "DISTRIBUTION", "age_group": "U17-U18", "name": "Half-Volley Distance", "type": "\ud83c\udfe0", "setup": "Balls, Field \u26bd", "steps": "Drop ball and strike at half-bounce to targets at 40\u201360 yards.", "focus": "Drop timing, contact point, full follow-through, trajectory.", "volume": "4 sets of 8 kicks.", "variation": "**Harder:** Aim at specific target markers (e.g., trash cans/hoops).", "is_wall": false, "animation": [{"desc": "Prepare to distribute", "goalie": [50, 85], "ball": [50, 85], "attacker": null}, {"desc": "Scan for targets", "goalie": [50, 80], "ball": [50, 80], "attacker": null}, {"desc": "Distribute accurately", "goalie": [50, 80], "ball": [80, 20], "attacker": null}, {"desc": "Target receives ball", "goalie": [50, 80], "ball": [80, 20], "attacker": null}]}, {"id": "DISTRIBUTION_U17-U18_2", "pillar": "DISTRIBUTION", "age_group": "U17-U18", "name": "Full-Game Simulation", "type": "\ud83d\udc65", "setup": "Goal, Team \u26bd", "steps": "15m possession game. Keeper is integrated as 11th outfielder.", "focus": "Pass %, decision quality, tempo control, reading the press.", "volume": "1 full 15-minute game.", "variation": "**Harder:** Keeper only has 2 touches max per possession.", "is_wall": false, "animation": [{"desc": "Prepare to distribute", "goalie": [50, 85], "ball": [50, 85], "attacker": null}, {"desc": "Scan for targets", "goalie": [50, 80], "ball": [50, 80], "attacker": null}, {"desc": "Distribute accurately", "goalie": [50, 80], "ball": [80, 20], "attacker": null}, {"desc": "Target receives ball", "goalie": [50, 80], "ball": [80, 20], "attacker": null}]}, {"id": "DISTRIBUTION_U17-U18_3", "pillar": "DISTRIBUTION", "age_group": "U17-U18", "name": "Transition Throw \u2014 Finish", "type": "\ud83d\udc65", "setup": "Goal, teammates \u26bd", "steps": "Save, then throw to start 3v2 counter. Result shot in 10s.", "focus": "Throw speed, catalytic passes, leading attackers into space.", "volume": "8 total reps.", "variation": "**Harder:** Add a backtracking defender to the counter-attack.", "is_wall": false, "animation": [{"desc": "Prepare to distribute", "goalie": [50, 85], "ball": [50, 85], "attacker": null}, {"desc": "Scan for targets", "goalie": [50, 80], "ball": [50, 80], "attacker": null}, {"desc": "Distribute accurately", "goalie": [50, 80], "ball": [80, 20], "attacker": null}, {"desc": "Target receives ball", "goalie": [50, 80], "ball": [80, 20], "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U8-U10_1", "pillar": "FOOTWORK & AGILITY", "age_group": "U8-U10", "name": "Ladder Dance", "type": "\ud83c\udfe0", "setup": "Agility Ladder \u26bd", "steps": "Basic patterns: icky-shuffle, lateral, two-in-each.", "focus": "Foot light/fast, high turn rate, eyes up, rhythm.", "volume": "3 runs per pattern.", "variation": "**Harder:** Hold a tennis ball or keep your eyes on the coach.", "is_wall": false, "animation": [{"desc": "Start at base of ladder.", "goalie": [50, 98], "ball": null, "attacker": null}, {"desc": "Left-Right lead into box 1.", "goalie": [45, 90], "ball": null, "attacker": null}, {"desc": "Lateral step wide of box 2.", "goalie": [65, 80], "ball": null, "attacker": null}, {"desc": "High knee turnover through final boxes.", "goalie": [50, 60], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U8-U10_2", "pillar": "FOOTWORK & AGILITY", "age_group": "U8-U10", "name": "Cone Shuffle & Set", "type": "\ud83d\udc65", "setup": "4 cones, Ball \u26bd", "steps": "Shuffle to each cone, get in ready pos, catch ball.", "focus": "No-cross feet shuffle, getting \"Set\" early, balance.", "volume": "4 sets of all 4 cones.", "variation": "**Harder:** Coach varies throw speed or lobs vs driven balls.", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U8-U10_3", "pillar": "FOOTWORK & AGILITY", "age_group": "U8-U10", "name": "Follow the Leader", "type": "\ud83d\udc65", "setup": "Space", "steps": "Mirror coach's movements: forward, back, lateral, diagonal.", "focus": "Reaction to movement cues, ready position, balance.", "volume": "3 rounds of 30 seconds.", "variation": "**Harder:** Use a ball; keeper must hold it while mirroring.", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U11-U13_1", "pillar": "FOOTWORK & AGILITY", "age_group": "U11-U13", "name": "Box Agility Circuit", "type": "\ud83c\udfe0", "setup": "4 cones (square) \u26bd", "steps": "Sprint forward \u2192 shuffle \u2192 backpedal \u2192 shuffle.", "focus": "Transition speed, low center of gravity, sharp turns.", "volume": "6 reps each direction.", "variation": "**Harder:** Add a ball at the last cone for a scoop save.", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U11-U13_2", "pillar": "FOOTWORK & AGILITY", "age_group": "U11-U13", "name": "Power Step Drill", "type": "\ud83d\udc65", "setup": "Ball, cones, goal \u26bd", "steps": "Explosive power step on command, then dive to save.", "focus": "Explosiveness, pushing off trailing foot, covering ground.", "volume": "5 reps each side (3 sets).", "variation": "**Harder:** Add a low hurdle to jump over for the power step.", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U11-U13_3", "pillar": "FOOTWORK & AGILITY", "age_group": "U11-U13", "name": "Crossover & Save", "type": "\ud83d\udc65", "setup": "Ball, goal, cones \u26bd", "steps": "Use crossover step for far shot coverage, then dive.", "focus": "Crossover technique, covering ground fast, recovery set.", "volume": "8 reps each side.", "variation": "**Harder:** Start seated to increase recovery/get-set challenge.", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U14-U16_1", "pillar": "FOOTWORK & AGILITY", "age_group": "U14-U16", "name": "T-Test Speed Drill", "type": "\ud83c\udfe0", "setup": "4 cones \u26bd", "steps": "Sprint forward, shuffle left/right, backpedal. Time it.", "focus": "Agility transitions, balance, speed, foot turnover rate.", "volume": "5 runs (timed).", "variation": "**Harder:** Touch each cone with your hand to increase depth.", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U14-U16_2", "pillar": "FOOTWORK & AGILITY", "age_group": "U14-U16", "name": "Recovery & Reposition", "type": "\ud83d\udc65", "setup": "Ball, goal, 2 servers \u26bd", "steps": "Dive left, recover, reposition center, faces shot right (3s).", "focus": "Recovery speed, getting \"Set\" (feet planted), repositioning line.", "volume": "4 sets of 6 reps.", "variation": "**Harder:** Servers can shoot or pass to keep keeper guessing.", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U14-U16_3", "pillar": "FOOTWORK & AGILITY", "age_group": "U14-U16", "name": "Angle-Change Sprint", "type": "\ud83d\udc65", "setup": "Cones, goal, shooter \u26bd", "steps": "Sprint to cone called, adjust angle, get set, save.", "focus": "Speed of adjustment, getting \"Set\" before shot, depth.", "volume": "15 total reps.", "variation": "**Harder:** Add 2 shooters who can pass before taking the shot.", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U17-U18_1", "pillar": "FOOTWORK & AGILITY", "age_group": "U17-U18", "name": "GK Plyometric Circuit", "type": "\ud83c\udfe0", "setup": "Box/Cones \u26bd", "steps": "Box jump, lateral bounds, depth jumps, single-leg stick.", "focus": "Explosiveness, landing mechanics, stabilizer strength.", "volume": "3 full circuits.", "variation": "**Harder:** Add a medicine ball for the bounds and jumps.", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U17-U18_2", "pillar": "FOOTWORK & AGILITY", "age_group": "U17-U18", "name": "Chaos Footwork Drill", "type": "\ud83d\udc65", "setup": "Balls, goal, cones \u26bd", "steps": "commands: shuffle/drop/sprint. Whistle = save immediate shot.", "focus": "Set position ready from any movement, reaction speed.", "volume": "3 rounds of 90 seconds.", "variation": "**Harder:** Add visual distractions (e.g., lights or screen).", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "FOOTWORK_&_AGILITY_U17-U18_3", "pillar": "FOOTWORK & AGILITY", "age_group": "U17-U18", "name": "Match-Simulation Move", "type": "\ud83d\udc65", "setup": "Goal, full game \u26bd", "steps": "Track repositioning movements during an 11v11 session.", "focus": "Proactive movement, adjusting line with ball, idle time efficiency.", "volume": "1 full training match.", "variation": "**Harder:** Keeper acts as sweeper for a high defensive line.", "is_wall": false, "animation": [{"desc": "Start at cone", "goalie": [50, 95], "ball": null, "attacker": null}, {"desc": "Quick shuffle", "goalie": [40, 95], "ball": null, "attacker": null}, {"desc": "Sprint to recovery", "goalie": [60, 95], "ball": null, "attacker": null}, {"desc": "Set for next shot", "goalie": [50, 95], "ball": null, "attacker": null}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U10_1", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U10", "name": "The Shadow Game", "type": "\ud83c\udfe0", "setup": "Ball, open space", "steps": "Place ball (shooter). Position self between ball and center goal.", "focus": "Concept of \"the angle,\" ball-goal line positioning.", "volume": "12 position checks.", "variation": "**Harder:** Move the ball faster and adjust on the run.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U10_2", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U10", "name": "Angle String Drill", "type": "\ud83d\udc65", "setup": "String, ball \u26bd", "steps": "Tie string from posts to ball to show shooting \"V\".", "focus": "Visualizing the shooting lane, finding narrowest gap.", "volume": "10 position changes.", "variation": "**Harder:** Remove the string and check if the keeper stays in the lane.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U10_3", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U10", "name": "Coach Says: Come/Stay", "type": "\ud83d\udc65", "setup": "Ball, small goal \u26bd", "steps": "Coach sets scenarios (ball close/far). Keeper decides and explains.", "focus": "Positional logic, risk assessment, decision speed.", "volume": "15 scenarios.", "variation": "**Harder:** Add a timer (1s to decide).", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U11-U13_1", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U11-U13", "name": "Film Study \u2014 Positioning", "type": "\ud83c\udfe0", "setup": "Phone/tablet", "steps": "Watch match film. Pause and mark where keeper should be.", "focus": "Analytical theory, understanding the ball-goal line.", "volume": "10m session.", "variation": "**Harder:** Review professional clips with high-speed movement.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U11-U13_2", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U11-U13", "name": "Position-Adjust-Save", "type": "\ud83d\udc65", "setup": "Balls, goal, 3 cones \u26bd", "steps": "Pass ball between 3 players. Keeper adjusts with every pass.", "focus": "Constant adjustment, reading danger, getting \"Set\" before shot.", "volume": "15 reps.", "variation": "**Harder:** One player can shoot at any time without warning.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U11-U13_3", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U11-U13", "name": "Small-Sided Game Focus", "type": "\ud83d\udc65", "setup": "Small goal, 4v4/5v5", "steps": "Play in SSG with focus on positioning logic. Coach tracks moves.", "focus": "Game-flow application, decision speed, reading team shape.", "volume": "1 full SSG game.", "variation": "**Harder:** Increase pitch size to force more sweeper-keeper movement.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U14-U16_1", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U14-U16", "name": "Tactical Film Journal", "type": "\ud83c\udfe0", "setup": "Notebook", "steps": "Journal professional keeper actions for one half of a match.", "focus": "Tactical eye, pro-level understanding, analytical growth.", "volume": "45m session.", "variation": "**Harder:** Present findings to your coach.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U14-U16_2", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U14-U16", "name": "Sweeper Decision Drill", "type": "\ud83d\udc65", "setup": "Goal, 3 players \u26bd", "steps": "Midfielder plays through-balls. Real-time sweep or hold decision.", "focus": "Decision speed, reading ball speed/angle, communication.", "volume": "12 total reps.", "variation": "**Harder:** Midfielder can take the ball themselves for a 1v1.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U14-U16_3", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U14-U16", "name": "Set-Piece Organization", "type": "\ud83d\udc65", "setup": "Goal, Team \u26bd", "steps": "Organize wall/marking for corners and free kicks.", "focus": "Wall placement, command clarity, defensive logic.", "volume": "8 set pieces.", "variation": "**Harder:** Assign \"unmarked\" players to see if keeper notices.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U17-U18_1", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U17-U18", "name": "Self-Scouting Report", "type": "\ud83c\udfe0", "setup": "Film, Notebook", "steps": "Review own match. Grade positioning, distribution, and comms.", "focus": "Self-awareness, analytical honesty, pattern recognition.", "volume": "1 full match review.", "variation": "**Harder:** Compare your scouting report with a teammate's view.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U17-U18_2", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U17-U18", "name": "High-Line Defense Game", "type": "\ud83d\udc65", "setup": "Full Pitch \u26bd", "steps": "Play as sweeper-keeper with a high defensive line.", "focus": "Proactive reading, sweeping technique, risk management.", "volume": "1 full match.", "variation": "**Harder:** Play with a 1-man disadvantage on the back line.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "TACTICAL_AWARENESS_&_DECISION_U17-U18_3", "pillar": "TACTICAL AWARENESS & DECISION", "age_group": "U17-U18", "name": "Decision Pressure Cooker", "type": "\ud83d\udc65", "setup": "Goal, Players \u26bd", "steps": "Rapid-fire tactical scenarios. 2s to call and execute.", "focus": "Decision speed, accuracy under pressure, verbal composure.", "volume": "20 scenarios.", "variation": "**Harder:** Add distracting crowd noise or verbal \"heckling\".", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "COMMUNICATION_&_LEADERSHIP_U10-U13_1", "pillar": "COMMUNICATION & LEADERSHIP", "age_group": "U10-U13", "name": "Mirror Commands", "type": "\ud83c\udfe0", "setup": "Mirror", "steps": "Call out commands: \"KEEPER!\", \"AWAY!\", \"DROP!\".", "focus": "Volume, clarity, authoritative body language.", "volume": "3 sets of all commands.", "variation": "**Harder:** Record yourself and play back to check clarity/fear factor.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "COMMUNICATION_&_LEADERSHIP_U10-U13_2", "pillar": "COMMUNICATION & LEADERSHIP", "age_group": "U10-U13", "name": "Blind Defending", "type": "\ud83d\udc65", "setup": "Defenders, Attacker \u26bd", "steps": "Direct a blindfolded defender using verbal cues ONLY.", "focus": "Command specificity, timing, volume, direction accuracy.", "volume": "6 reps.", "variation": "**Harder:** Use 2 defenders who both need directing simultaneously.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "COMMUNICATION_&_LEADERSHIP_U10-U13_3", "pillar": "COMMUNICATION & LEADERSHIP", "age_group": "U10-U13", "name": "Post-Play Call-Out", "type": "\ud83d\udc65", "setup": "Game setting", "steps": "Give one clear instruction after every dead ball stoppage.", "focus": "Specificity, habit building, leadership presence.", "volume": "10+ call-outs per session.", "variation": "**Harder:** Commands must include a tactical fix for the next play.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "COMMUNICATION_&_LEADERSHIP_U14-U18_1", "pillar": "COMMUNICATION & LEADERSHIP", "age_group": "U14-U18", "name": "Captain's Monologue", "type": "\ud83c\udfe0", "setup": "Voice recorder", "steps": "Record 60s halftime talk for specific match scenarios.", "focus": "Leadership voice, tactical content, confidence, composure.", "volume": "3 scenarios per week.", "variation": "**Harder:** Do it in front of a mirror or a live audience.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "COMMUNICATION_&_LEADERSHIP_U14-U18_2", "pillar": "COMMUNICATION & LEADERSHIP", "age_group": "U14-U18", "name": "Defensive Shape Drill", "type": "\ud83d\udc65", "setup": "Back 4 defenders", "steps": "Verbally organize the back 4 as attackers pass the ball.", "focus": "Specificity (names), early calls, adjusting to ball.", "volume": "10 minutes.", "variation": "**Harder:** Attackers can \"cheat\" (start offside) \u2014 keeper must catch it.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "COMMUNICATION_&_LEADERSHIP_U14-U18_3", "pillar": "COMMUNICATION & LEADERSHIP", "age_group": "U14-U18", "name": "Post-Match Debrief", "type": "\ud83d\udc65", "setup": "Whiteboard", "steps": "Lead a 3m defensive debrief after a training match.", "focus": "Leadership initiative, constructive feedback, tactical awareness.", "volume": "1 debrief session.", "variation": "**Harder:** Must list at least 3 positives for every 1 negative fix.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "MENTAL_&_PSYCHOLOGICAL_U10-U13_1", "pillar": "MENTAL & PSYCHOLOGICAL", "age_group": "U10-U13", "name": "The Reset Routine", "type": "\ud83c\udfe0", "setup": "No equipment", "steps": "Create and practice a 3-breath focus reset after conceding.", "focus": "Routine consistency, composure, psychological anchoring.", "volume": "5 reps x 5 days.", "variation": "**Harder:** Practice the routine while physically fatigued.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "MENTAL_&_PSYCHOLOGICAL_U10-U13_2", "pillar": "MENTAL & PSYCHOLOGICAL", "age_group": "U10-U13", "name": "Mistake Challenge", "type": "\ud83d\udc65", "setup": "Training setting", "steps": "Say ONE positive check after every physical mistake in a drill.", "focus": "Positive self-talk, reframing, resilience building.", "volume": "All drill mishaps.", "variation": "**Harder:** Must also say one technical fix for the mistake.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "MENTAL_&_PSYCHOLOGICAL_U10-U13_3", "pillar": "MENTAL & PSYCHOLOGICAL", "age_group": "U10-U13", "name": "Focus Timer", "type": "\ud83d\udc65", "setup": "Game setting", "steps": "Coach secretly rates focus in 3 random 5m windows.", "focus": "Concentration endurance, body language, proactive comms.", "volume": "3 windows per game.", "variation": "**Harder:** Coach tells everyone EXCEPT the keeper to distract them.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "MENTAL_&_PSYCHOLOGICAL_U14-U18_1", "pillar": "MENTAL & PSYCHOLOGICAL", "age_group": "U14-U18", "name": "Visualization Routine", "type": "\ud83c\udfe0", "setup": "Quiet space", "steps": "Visualize 5 match scenarios (save, cross, 1v1, dist, mistake).", "focus": "Detail of visualization, routine discipline, emotional control.", "volume": "10m x 3 per week.", "variation": "**Harder:** \"Feel\" the temperature, wind, and grass in the viz.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "MENTAL_&_PSYCHOLOGICAL_U14-U18_2", "pillar": "MENTAL & PSYCHOLOGICAL", "age_group": "U14-U18", "name": "Pressure Simulation", "type": "\ud83d\udc65", "setup": "Full goal, speakers \u26bd", "steps": "Perform technical drill with crowd noise and verbal distractions.", "focus": "Focus under noise, composure, technique consistency.", "volume": "15 minutes.", "variation": "**Harder:** Teammates actively try to make the keeper laugh/break focus.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}, {"id": "MENTAL_&_PSYCHOLOGICAL_U14-U18_3", "pillar": "MENTAL & PSYCHOLOGICAL", "age_group": "U14-U18", "name": "Journaling & Reflection", "type": "\ud83c\udfe0", "setup": "Notebook", "steps": "Write (1) Well (2) Different (3) Focus after every session.", "focus": "Self-awareness, pattern recognition, growth mindset.", "volume": "Every training/match.", "variation": "**Harder:** Present your journal entries during 1-on-1 coach meetings.", "is_wall": false, "animation": [{"desc": "Ready Position", "goalie": [50, 95], "ball": [50, 60], "attacker": [50, 50]}, {"desc": "Ball is shot", "goalie": [50, 95], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Save made", "goalie": [45, 93], "ball": [45, 93], "attacker": [50, 50]}, {"desc": "Recover to center", "goalie": [50, 95], "ball": [10, 50], "attacker": [50, 50]}]}];
+    const featuredDrills = ["Collapse Dive Progression", "1v1 Approach Drill", "Distribution Decision Game"];
+    
+    let currentDrill = null;
+    let currentStep = 0;
+    
+    const sidebar = document.getElementById('sidebar');
+    const titleEl = document.getElementById('c-title');
+    const pillarEl = document.getElementById('c-pillar');
+    const descEl = document.getElementById('c-desc');
+    const setupEl = document.getElementById('c-setup');
+    const focusEl = document.getElementById('c-focus');
+    const volumeEl = document.getElementById('c-volume');
+    const variationEl = document.getElementById('c-variation');
+    const dotsEl = document.getElementById('c-dots');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const wallUI = document.getElementById('wall-ui');
+    const svgGoal = document.getElementById('svg-goal');
+    const fieldContainer = document.getElementById('field-container');
+    
+    const entGoalie = document.getElementById('ent-goalie');
+    const entBall = document.getElementById('ent-ball');
+    const attackersContainer = document.getElementById('attackers-container');
+
+    function init() {
+        sidebar.innerHTML = '';
+        let currentPillarHeader = "";
+        
+        drillsData.forEach((drill, index) => {
+            if (drill.pillar !== currentPillarHeader) {
+                currentPillarHeader = drill.pillar;
+                const header = document.createElement('div');
+                header.className = 'sidebar-header';
+                header.textContent = currentPillarHeader;
+                sidebar.appendChild(header);
+            }
+
+            const isFeatured = featuredDrills.includes(drill.name);
+            const div = document.createElement('div');
+            div.className = 'drill-item';
+            div.innerHTML = `
+                <div class="drill-title">${drill.name}</div>
+                <div class="drill-meta">
+                    <span class="badge">${drill.age_group}</span>
+                    <span class="badge green">${drill.type}</span>
+                    ${isFeatured ? '<span class="badge featured">ANIMATED</span>' : ''}
+                    ${drill.is_wall ? '<span class="badge" style="background:rgba(120,144,156,0.1); color:#90A4AE;">WALL</span>' : ''}
+                </div>
+            `;
+            div.onclick = () => loadDrill(index);
+            sidebar.appendChild(div);
+        });
+        
+        const firstFeaturedIndex = drillsData.findIndex(d => d.name === "Collapse Dive Progression");
+        loadDrill(firstFeaturedIndex >= 0 ? firstFeaturedIndex : 0);
+    }
+    
+    function loadDrill(index) {
+        document.querySelectorAll('.drill-item').forEach(el => el.classList.remove('active'));
+        const items = Array.from(document.querySelectorAll('.drill-item:not(.sidebar-header)'));
+        if (items[index]) items[index].classList.add('active');
+        
+        currentDrill = drillsData[index];
+        currentStep = 0;
+        
+        titleEl.textContent = currentDrill.name;
+        pillarEl.textContent = currentDrill.pillar;
+        setupEl.textContent = currentDrill.setup;
+        focusEl.textContent = currentDrill.focus;
+        volumeEl.textContent = currentDrill.volume;
+        variationEl.textContent = currentDrill.variation;
+
+        // Toggle Wall Setup and Environment
+        const svgFullField  = document.getElementById('svg-full-field');
+        const svgHalfField  = document.getElementById('svg-half-field');
+        const svgThirdField = document.getElementById('svg-third-field');
+
+        // Field type detection
+        const fullFieldKeywords = ['full pitch', 'full game', '11v11', 'full corner', 'full team'];
+        const halfFieldKeywords  = ['25 yards', '30 yards', '35 yards', '40 yards', 'midfield', 'counter'];
+        const setupLower = ((currentDrill.setup || '') + ' ' + (currentDrill.name || '')).toLowerCase();
+
+        const isWall      = currentDrill.is_wall;
+        const isHome      = currentDrill.type && currentDrill.type.includes('🏠') && !isWall;
+        const isFullField = !isWall && !isHome && (currentDrill.full_field === true || fullFieldKeywords.some(k => setupLower.includes(k)));
+        const isHalfField = !isWall && !isHome && !isFullField && (
+            (currentDrill.pillar || '').toUpperCase().includes('CROSS') ||
+            halfFieldKeywords.some(k => setupLower.includes(k))
+        );
+        // 1/3 field is the default for all remaining on-field drills
+
+        // Helper: show one SVG, hide others
+        function showField(show3rd, showHalf, showFull) {
+            svgThirdField.style.display = show3rd  ? 'block' : 'none';
+            svgHalfField.style.display  = showHalf ? 'block' : 'none';
+            svgFullField.style.display  = showFull ? 'block' : 'none';
+        }
+
+        const fieldLabel = document.getElementById('field-label');
+
+        if (isWall) {
+            wallUI.style.display = 'block';
+            fieldContainer.className = 'field-container at-home';
+            showField(false, false, false);
+            fieldLabel.textContent = '🏠 Wall Drill';
+        } else if (isHome) {
+            wallUI.style.display = 'none';
+            fieldContainer.className = 'field-container at-home';
+            showField(false, false, false);
+            fieldLabel.textContent = '🏠 At Home';
+        } else if (isFullField) {
+            wallUI.style.display = 'none';
+            fieldContainer.className = 'field-container';
+            showField(false, false, true);
+            fieldLabel.textContent = '⚽ Full Field';
+        } else if (isHalfField) {
+            wallUI.style.display = 'none';
+            fieldContainer.className = 'field-container half-field';
+            showField(false, true, false);
+            fieldLabel.textContent = '⚽ Half Field';
+        } else {
+            // Default: 1/3 field
+            wallUI.style.display = 'none';
+            fieldContainer.className = 'field-container';
+            showField(true, false, false);
+            fieldLabel.textContent = '⚽ 1/3 Field';
+        }
+
+        updateCarousel();
+    }
+    
+    function updateCarousel() {
+        const steps = currentDrill.animation;
+        const step = steps[currentStep];
+        
+        descEl.textContent = step.desc;
+        
+        // Adjust coordinates for wall drills (facing top)
+        updateEntity(entGoalie, step.goalie);
+        updateEntity(entBall, step.ball);
+        
+        // Handle Multiple Attackers
+        attackersContainer.innerHTML = '';
+        const attList = step.attackers || (step.attacker ? [step.attacker] : []);
+        attList.forEach((pos, i) => {
+            const att = document.createElement('div');
+            att.className = 'entity attacker';
+            att.textContent = attList.length > 1 ? (i + 1) : 'A';
+            updateEntity(att, pos);
+            attackersContainer.appendChild(att);
+        });
+        
+        dotsEl.innerHTML = '';
+        steps.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = `dot ${i === currentStep ? 'active' : ''}`;
+            dotsEl.appendChild(dot);
+        });
+        
+        btnPrev.disabled = false; 
+        btnNext.disabled = false;
+    }
+    
+    function updateEntity(el, posArray) {
+        if (!posArray) {
+            el.style.opacity = '0';
+            setTimeout(() => { if (el.style.opacity === '0') el.style.display = 'none'; }, 600);
+        } else {
+            el.style.display = 'flex';
+            // Trigger reflow for transition
+            el.offsetHeight; 
+            el.style.opacity = '1';
+            el.style.left = `${posArray[0]}%`;
+            el.style.top = `${posArray[1]}%`;
+        }
+    }
+    
+    function prevStep() {
+        if (currentStep > 0) {
+            currentStep--;
+        } else {
+            currentStep = currentDrill.animation.length - 1; // Loop to end
+        }
+        updateCarousel();
+    }
+    
+    function nextStep() {
+        if (currentStep < currentDrill.animation.length - 1) {
+            currentStep++;
+        } else {
+            currentStep = 0; // Infinite Loop back to start
+        }
+        updateCarousel();
+    }
+    
+    window.onload = init;
+</script>
+</body>
+</html>

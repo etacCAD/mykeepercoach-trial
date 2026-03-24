@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Keeper Coach - Admin Portal</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        /* ── Admin Tab System ─────────────────────────── */
+        .admin-tabs {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 1.75rem;
+            background: rgba(255,255,255,0.04);
+            border-radius: 14px;
+            padding: 0.35rem;
+            width: fit-content;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .admin-tabs::-webkit-scrollbar { display: none; }
+        .admin-tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            padding: 0.55rem 1.25rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
+        .admin-tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
+        .admin-tab-btn.active {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 2px 12px rgba(var(--accent-rgb, 99,102,241),0.35);
+        }
+        .admin-tab-panel { display: none; }
+        .admin-tab-panel.active { display: block; }
+
+        /* ── Log Feed ─────────────────────────────────── */
+        .log-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 620px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
+        .log-entry {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 0.9rem;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: background 0.15s;
+        }
+        .log-entry:hover { background: rgba(255,255,255,0.06); }
+        .log-dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        }
+        .log-dot.ready    { background: #48bb78; box-shadow: 0 0 6px #48bb7866; }
+        .log-dot.pending  { background: #ecc94b; box-shadow: 0 0 6px #ecc94b66; }
+        .log-dot.processing { background: #63b3ed; box-shadow: 0 0 6px #63b3ed66; }
+        .log-dot.failed   { background: #fc8181; box-shadow: 0 0 6px #fc818166; }
+        .log-main { display: flex; flex-direction: column; gap: 0.15rem; }
+        .log-label { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); }
+        .log-meta  { font-size: 0.76rem; color: var(--text-muted); }
+        .log-status-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.25rem 0.65rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+        .badge-ready      { background: rgba(72,187,120,0.15); color: #68d391; }
+        .badge-pending    { background: rgba(236,201,75,0.15);  color: #f6e05e; }
+        .badge-processing { background: rgba(99,179,237,0.15);  color: #90cdf4; }
+        .badge-failed     { background: rgba(252,129,129,0.15); color: #fc8181; }
+
+        .log-filters {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .log-filter-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-muted);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.3rem 0.85rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .log-filter-btn:hover, .log-filter-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        .log-search {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            padding: 0.45rem 0.9rem;
+            outline: none;
+            width: 220px;
+            transition: border-color 0.2s;
+        }
+        .log-search:focus { border-color: var(--accent); }
+        .log-search::placeholder { color: var(--text-muted); }
+
+        /* ── Coach Reports ────────────────────────────── */
+        .reports-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.25rem;
+            min-height: 500px;
+        }
+        .report-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 620px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
+        .report-list-item {
+            padding: 0.8rem 1rem;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .report-list-item:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12); }
+        .report-list-item.selected { background: rgba(var(--accent-rgb,99,102,241),0.15); border-color: var(--accent); }
+        .report-list-player { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.15rem; }
+        .report-list-label  { font-size: 0.78rem; color: var(--text-muted); }
+        .report-list-rating {
+            display: inline-block;
+            margin-top: 0.4rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(var(--accent-rgb,99,102,241),0.2);
+            color: var(--accent);
+            padding: 0.15rem 0.55rem;
+            border-radius: 10px;
+        }
+        .report-detail-panel {
+            padding: 1.5rem;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.07);
+            overflow-y: auto;
+            max-height: 620px;
+        }
+        .report-detail-panel .empty-state {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .report-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        .report-detail-title { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+        .report-detail-sub   { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
+        .report-overall-badge {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent);
+            background: rgba(var(--accent-rgb,99,102,241),0.15);
+            padding: 0.4rem 0.9rem;
+            border-radius: 12px;
+        }
+        .report-summary {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            border-left: 3px solid var(--accent);
+        }
+        .report-section-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin: 1.25rem 0 0.6rem;
+        }
+        .report-strengths-list, .report-areas-list { padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.35rem; }
+        .report-strengths-list li { font-size: 0.85rem; color: #68d391; }
+        .report-areas-list li { font-size: 0.85rem; color: #90cdf4; }
+        .report-coach-note {
+            background: rgba(255,255,255,0.04);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-top: 0.6rem;
+            font-style: italic;
+        }
+        .report-player-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+        .report-player-tag span {
+            background: rgba(255,255,255,0.07);
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
+        }
+
+        /* Scrollbar styling */
+        .log-feed::-webkit-scrollbar, .report-list::-webkit-scrollbar, .report-detail-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+        .log-feed::-webkit-scrollbar-track, .report-list::-webkit-scrollbar-track, .report-detail-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .log-feed::-webkit-scrollbar-thumb, .report-list::-webkit-scrollbar-thumb, .report-detail-panel::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+        
+        @media (max-width: 768px) {
+            .reports-grid {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+            .admin-tabs {
+                width: 100%;
+            }
+            .log-entry {
+                grid-template-columns: auto 1fr;
+                align-items: start;
+            }
+            .log-status-badge {
+                grid-column: 2;
+                justify-self: start;
+                margin-top: 0.3rem;
+            }
+            .report-detail-panel {
+                max-height: none;
+                padding: 1rem;
+            }
+            form .input-group {
+                margin-bottom: 1rem !important;
+            }
+            .admin-grid .create-user-widget,
+            .admin-grid .roster-widget {
+                padding: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body class="admin-bg">
+    <nav class="top-nav glassmorphism admin-nav">
+        <div class="nav-brand"><span>My</span> Keeper <span>Coach</span> <span class="badge">Admin Hub</span></div>
+        <div class="nav-user">
+            <span>Admin</span>
+            <button id="adminLogoutBtn" class="btn sm-btn outline-btn">Log Out</button>
+        </div>
+    </nav>
+
+    <main class="dashboard-container">
+
+        <!-- Tab Bar -->
+        <div class="admin-tabs">
+            <button class="admin-tab-btn active" data-tab="roster">👥 Roster</button>
+            <button class="admin-tab-btn" data-tab="logs">📋 Activity Logs</button>
+            <button class="admin-tab-btn" data-tab="reports">📊 Coach Reports</button>
+            <button class="admin-tab-btn" data-tab="promo">🎁 Promo Codes</button>
+            <button class="admin-tab-btn" data-tab="ted">🤖 Ted Chats</button>
+        </div>
+
+        <!-- ═══════════════════════════════════════ -->
+        <!-- TAB: ROSTER                            -->
+        <!-- ═══════════════════════════════════════ -->
+        <div class="admin-tab-panel active" id="tab-roster">
+            <div class="admin-grid">
+                <!-- Create User Widget -->
+                <section class="glassmorphism create-user-widget">
+                    <h3>Provision New Player</h3>
+                    <p class="subtitle">Create separated accounts for each keeper.</p>
+                    <form id="createUserForm">
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <div class="input-group" style="flex: 1 1 200px;">
+                                <label>First Name</label>
+                                <input type="text" id="newPlayerFirstName" required placeholder="e.g. Liam">
+                            </div>
+                            <div class="input-group" style="flex: 1 1 200px;">
+                                <label>Last Name</label>
+                                <input type="text" id="newPlayerLastName" required placeholder="e.g. Smith">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <div class="input-group" style="flex: 1 1 200px;">
+                                <label>Player Email</label>
+                                <input type="email" id="newPlayerEmail" required placeholder="liam@example.com">
+                            </div>
+                            <div class="input-group" style="flex: 1 1 200px;">
+                                <label>Age Group</label>
+                                <select id="newPlayerAgeGroup" required style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: var(--text-primary); border-radius: 10px; padding: 0.75rem 1rem; font-family: 'Outfit', sans-serif; font-size: 0.95rem; outline: none;">
+                                    <option value="" disabled selected>Select age group...</option>
+                                    <option value="U8-U10">U8 - U10</option>
+                                    <option value="U11-U13">U11 - U13</option>
+                                    <option value="U14-U16">U14 - U16</option>
+                                    <option value="U17-U18">U17 - U18</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Initial Password</label>
+                            <input type="text" id="newPlayerAuth" required value="keeper2026">
+                            <small>They can reset this later.</small>
+                        </div>
+                        <button type="submit" class="btn primary-btn" id="createUserBtn">Create Player</button>
+                        <p id="adminStatusMsg" class="status-msg"></p>
+                    </form>
+                </section>
+
+                <!-- Roster Widget -->
+                <section class="glassmorphism roster-widget">
+                    <h3>Roster / Impersonation Mode</h3>
+                    <p class="subtitle">Select a player to test their exact dashboard view.</p>
+                    <div class="roster-list" id="rosterList">
+                        <div class="roster-item empty-state">Loading roster...</div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════ -->
+        <!-- TAB: ACTIVITY LOGS                     -->
+        <!-- ═══════════════════════════════════════ -->
+        <div class="admin-tab-panel" id="tab-logs">
+            <section class="glassmorphism" style="padding: 1.5rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
+                    <div>
+                        <h3 style="margin:0 0 0.2rem;">Activity Logs</h3>
+                        <p class="subtitle" style="margin:0;">Video uploads and processing events across all players.</p>
+                    </div>
+                    <input class="log-search" id="logSearch" type="search" placeholder="Search player or match…">
+                </div>
+
+                <div class="log-filters">
+                    <button class="log-filter-btn active" data-filter="all">All</button>
+                    <button class="log-filter-btn" data-filter="ready">✦ Ready</button>
+                    <button class="log-filter-btn" data-filter="processing">⟳ Processing</button>
+                    <button class="log-filter-btn" data-filter="pending">⏳ Pending</button>
+                    <button class="log-filter-btn" data-filter="failed">⚠ Failed</button>
+                </div>
+
+                <div class="log-feed" id="logFeed">
+                    <div class="log-entry" style="color:var(--text-muted);font-size:0.85rem;">Loading logs…</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ═══════════════════════════════════════ -->
+        <!-- TAB: COACH REPORTS                     -->
+        <!-- ═══════════════════════════════════════ -->
+        <div class="admin-tab-panel" id="tab-reports">
+            <section class="glassmorphism" style="padding: 1.5rem;">
+                <div style="margin-bottom:1.25rem;">
+                    <h3 style="margin:0 0 0.2rem;">Coach Reports</h3>
+                    <p class="subtitle" style="margin:0;">Review AI-generated match analysis for all players.</p>
+                </div>
+
+                <div class="reports-grid">
+                    <div class="report-list" id="reportList">
+                        <div style="color:var(--text-muted);font-size:0.85rem;padding:1rem;">Loading reports…</div>
+                    </div>
+                    <div class="report-detail-panel" id="reportDetail">
+                        <div class="empty-state" style="min-height:300px;">
+                            <span style="font-size:2rem;">📊</span>
+                            <p>Select a report from the list to review it.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ═══════════════════════════════════════ -->
+        <!-- TAB: PROMO CODES                        -->
+        <!-- ═══════════════════════════════════════ -->
+        <div class="admin-tab-panel" id="tab-promo">
+            <section class="glassmorphism" style="padding: 1.5rem;">
+                <div style="margin-bottom:1.25rem;">
+                    <h3 style="margin:0 0 0.2rem;">Promo Codes</h3>
+                    <p class="subtitle" style="margin:0;">Manage profile creation access codes.</p>
+                </div>
+
+                <div class="admin-grid">
+                    <!-- Create Code Widget -->
+                    <div class="create-user-widget">
+                        <h4 style="margin-top:0;">Create New Code</h4>
+                        <form id="createPromoForm">
+                            <div class="input-group">
+                                <label>Code (e.g. CAMP2026)</label>
+                                <input type="text" id="newPromoCode" required style="text-transform: uppercase;">
+                            </div>
+                            <div class="input-group">
+                                <label>Usage Limit</label>
+                                <input type="number" id="newPromoLimit" value="10" min="1" required>
+                            </div>
+                            <button type="submit" class="btn primary-btn" id="createPromoBtn">Create Code</button>
+                            <p id="promoStatusMsg" class="status-msg"></p>
+                        </form>
+                    </div>
+
+                    <!-- List Codes Widget -->
+                    <div class="roster-widget">
+                        <h4 style="margin-top:0;">Active & Past Codes</h4>
+                        <div class="roster-list" id="promoList">
+                            <div class="roster-item empty-state">Loading promo codes...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ═══════════════════════════════════════ -->
+        <!-- TAB: TED CHATS                         -->
+        <!-- ═══════════════════════════════════════ -->
+        <div class="admin-tab-panel" id="tab-ted">
+            <section class="glassmorphism" style="padding: 1.5rem;">
+                <div style="margin-bottom:1.25rem;">
+                    <h3 style="margin:0 0 0.2rem;">Ted Conversations</h3>
+                    <p class="subtitle" style="margin:0;">Review AI chatbot interactions across the landing page and dashboard.</p>
+                </div>
+
+                <div class="reports-grid">
+                    <div class="report-list" id="tedList">
+                        <div style="color:var(--text-muted);font-size:0.85rem;padding:1rem;">Loading conversations…</div>
+                    </div>
+                    <div class="report-detail-panel" id="tedDetail">
+                        <div class="empty-state" style="min-height:300px;">
+                            <span style="font-size:2rem;">💬</span>
+                            <p>Select a conversation from the list to review it.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Edit Player Modal -->
+    <div class="modal-overlay" id="editModal" style="display:none;">
+        <div class="modal glassmorphism">
+            <div class="modal-header">
+                <h3>Edit Player</h3>
+                <button class="modal-close" id="closeEditModal">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editUid">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="input-group" style="flex: 1 1 200px;">
+                        <label>First Name</label>
+                        <input type="text" id="editFirstName" placeholder="e.g. Liam">
+                    </div>
+                    <div class="input-group" style="flex: 1 1 200px;">
+                        <label>Last Name</label>
+                        <input type="text" id="editLastName" placeholder="e.g. Smith">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="input-group" style="flex: 1 1 200px;">
+                        <label>Email</label>
+                        <input type="email" id="editEmail" placeholder="liam@example.com">
+                    </div>
+                    <div class="input-group" style="flex: 1 1 200px;">
+                        <label>Age Group</label>
+                        <select id="editAgeGroup" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: var(--text-primary); border-radius: 10px; padding: 0.75rem 1rem; font-family: 'Outfit', sans-serif; font-size: 0.95rem; outline: none;">
+                            <option value="">Unset</option>
+                            <option value="U8-U10">U8 - U10</option>
+                            <option value="U11-U13">U11 - U13</option>
+                            <option value="U14-U16">U14 - U16</option>
+                            <option value="U17-U18">U17 - U18</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>New Password <span class="field-hint">(leave blank to keep current)</span></label>
+                    <input type="text" id="editPassword" placeholder="min 6 characters">
+                </div>
+                <p id="editStatusMsg" class="status-msg"></p>
+                <p id="editErrorMsg" class="error-msg"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn outline-btn" id="cancelEditBtn">Cancel</button>
+                <button class="btn primary-btn" id="saveEditBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal" style="display:none;">
+        <div class="modal glassmorphism">
+            <div class="modal-header">
+                <h3>Delete Player</h3>
+                <button class="modal-close" id="closeDeleteModal">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="deleteUid">
+                <p style="color:var(--text-muted);margin-bottom:0.5rem;">You are about to permanently delete:</p>
+                <p id="deletePlayerLabel" style="font-weight:600;font-size:1.05rem;margin-bottom:1rem;"></p>
+                <p class="error-msg" style="display:block;margin:0;">⚠️ This will remove the player's account and all associated data. This action cannot be undone.</p>
+                <p id="deleteStatusMsg" class="status-msg" style="margin-top:0.75rem;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn outline-btn" id="cancelDeleteBtn">Cancel</button>
+                <button class="btn" id="confirmDeleteBtn" style="background:var(--danger,#e53e3e);color:#fff;">Delete Player</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="/js/firebase-config.js"></script>
+    <script type="module" src="/js/admin.js"></script>
+</body>
+</html>

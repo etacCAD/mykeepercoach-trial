@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == 'evan@tacanni.com';
+    }
+
+    // ============================================================
+    // USER PROFILES
+    // ============================================================
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if false; // Cloud Function only
+
+      // --------------------------------------------------------
+      // VIDEO SESSIONS (Web Dashboard uploads)
+      // --------------------------------------------------------
+      match /sessions/{sessionId} {
+        allow read, write: if isOwner(uid) || isAdmin();
+      }
+    }
+
+    // ============================================================
+    // PROMO CODES
+    // ============================================================
+
+    match /promoCodes/{codeId} {
+      // Any authenticated user may read a code by ID (needed for redemption checks)
+      allow read: if isAuthenticated();
+      // Only admin can create or update codes
+      allow create, update: if isAdmin();
+      allow delete: if false;
+
+      match /redemptions/{uid} {
+        // Users can see their own redemption record
+        allow read: if isOwner(uid);
+        // Writes are Cloud Function only (service account bypasses rules)
+        allow write: if false;
+      }
+    }
+
+    // ============================================================
+    // TED CONVERSATIONS
+    // ============================================================
+    
+    match /tedConversations/{chatId} {
+      // Anyone (even anonymous) can create a chat log
+      allow create: if true;
+      // Only admin can read or manage these logs
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ============================================================
+    // CATCH-ALL
+    // ============================================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

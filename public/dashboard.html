@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Keeper Coach - Dashboard</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dashboard-bg">
+    <nav class="top-nav glassmorphism">
+        <div class="nav-brand"><span>My</span> Keeper <span>Coach</span></div>
+        <div class="nav-user">
+            <span id="playerName" class="nav-player-name">Loading...</span>
+            <button id="settingsBtn" class="btn sm-btn outline-btn" style="margin-right: 0.25rem;">Settings</button>
+            <button id="logoutBtn" class="btn sm-btn outline-btn">Log Out</button>
+        </div>
+    </nav>
+
+    <!-- Trial Status Banner (shown/hidden by JS) -->
+    <div id="trialBanner" class="trial-banner glassmorphism" style="display:none;">
+        <div class="trial-banner-content">
+            <span class="trial-badge">FREE TRIAL</span>
+            <span id="trialBannerText">Full access — X days remaining</span>
+        </div>
+        <div class="trial-banner-actions">
+            <a id="trialStartLink" href="#" class="btn sm-btn primary-btn" style="display:none;">Start Free Trial</a>
+            <button id="trialDismissBtn" class="trial-dismiss" title="Dismiss">&times;</button>
+        </div>
+    </div>
+
+    <!-- Trial Activation Modal (first-time users) -->
+    <div id="trialModal" class="modal-overlay" style="display:none;">
+        <div class="modal glassmorphism trial-modal" style="max-width: 480px;">
+            <div class="modal-body" style="text-align:center; padding: 48px 36px;">
+                <div class="trial-modal-icon">⚽</div>
+                <h2 class="trial-modal-title">Your Keeper Career Starts Here</h2>
+                <p class="trial-modal-sub">Upload your matches, get AI-powered analysis, track your growth — full access until <strong>June 30, 2026</strong>. No credit card needed.</p>
+                <button id="activateTrialBtn" class="btn primary-btn lg-btn" style="width:100%; margin-top: 24px;">Start My Free Trial</button>
+                <button id="skipTrialBtn" class="btn outline-btn" style="width:100%; margin-top: 12px;">Maybe Later</button>
+                <p class="trial-modal-note">You can always start your trial later from your dashboard.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trial Expired Overlay -->
+    <div id="trialExpiredOverlay" class="modal-overlay" style="display:none;">
+        <div class="modal glassmorphism trial-modal" style="max-width: 480px;">
+            <div class="modal-body" style="text-align:center; padding: 48px 36px;">
+                <div class="trial-modal-icon">🔒</div>
+                <h2 class="trial-modal-title">Your Trial Has Ended</h2>
+                <p class="trial-modal-sub">Your free access expired on June 30. Subscribe to keep tracking your progress and leveling up your game.</p>
+                <button class="btn primary-btn lg-btn" style="width:100%; margin-top: 24px;" disabled>Subscribe — Coming Soon</button>
+                <button id="continueFreeTierBtn" class="btn outline-btn" style="width:100%; margin-top: 12px;">Continue with Free Features</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="dashboard-container">
+
+        <!-- ── Hero Profile Banner ─────────────────────────── -->
+        <section class="profile-hero glassmorphism">
+            <div class="hero-left">
+                <div class="hero-avatar" id="heroAvatar">GK</div>
+                <div class="hero-text">
+                    <h2 id="welcomeMsg">Welcome back!</h2>
+                    <p class="hero-subtitle" id="heroSubtitle">Ready to level up your game?</p>
+                </div>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat-card">
+                    <span class="hero-stat-val" id="overallRating">—</span>
+                    <span class="hero-stat-lbl">Overall Rating</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat-card">
+                    <span class="hero-stat-val" id="sessionCount">—</span>
+                    <span class="hero-stat-lbl">Sessions</span>
+                </div>
+            </div>
+            <!-- Desktop upload CTA inside hero -->
+            <div class="hero-upload-cta">
+                <button id="uploadVideoBtn" class="btn primary-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Upload Match
+                </button>
+            </div>
+        </section>
+
+        <!-- ── Mobile Tab Navigation ────────────────────────── -->
+        <nav class="dash-tabs" id="dashTabs">
+            <button class="dash-tab active" data-tab="overview">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Overview
+            </button>
+            <button class="dash-tab" data-tab="matches">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                Matches
+            </button>
+            <button class="dash-tab" data-tab="trends">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Trends
+            </button>
+        </nav>
+
+        <!-- ── Dashboard Grid ───────────────────────────────── -->
+        <div class="dashboard-grid-v2">
+
+            <!-- ═══ COL 1: Radar + Report Card ════════════════ -->
+            <div class="grid-col-left tab-panel" id="panel-overview">
+
+                <!-- Radar / Skill Spider -->
+                <section class="radar-section glassmorphism">
+                    <div class="section-header-row">
+                        <div>
+                            <h3>Skill Radar</h3>
+                            <p class="section-subtitle">Your latest match breakdown</p>
+                        </div>
+                        <div class="radar-overall-badge" id="radarOverallBadge" style="display:none;">
+                            <span class="radar-score" id="radarScore">—</span>
+                            <span class="radar-score-lbl">/ 10</span>
+                        </div>
+                    </div>
+                    <div class="radar-chart-wrap" style="position:relative; height: 280px;">
+                        <canvas id="radarChart"></canvas>
+                        <div id="radarEmptyState" class="radar-empty">
+                            <div class="radar-empty-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polygon points="12 7 16.8 10.5 15 16.1 9 16.1 7.2 10.5" fill="currentColor" fill-opacity="0.2"/>
+                                    <line x1="12" y1="7" x2="12" y2="2" />
+                                    <line x1="16.8" y1="10.5" x2="21.5" y2="8.9" />
+                                    <line x1="15" y1="16.1" x2="17.9" y2="20.1" />
+                                    <line x1="9" y1="16.1" x2="6.1" y2="20.1" />
+                                    <line x1="7.2" y1="10.5" x2="2.5" y2="8.9" />
+                                </svg>
+                            </div>
+                            <p>Upload your first match to see your skill radar</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Report Card -->
+                <section class="report-card glassmorphism">
+                    <div class="section-header-row">
+                        <div>
+                            <h3>Latest Report Card</h3>
+                            <p class="section-subtitle">AI coaching feedback</p>
+                        </div>
+                    </div>
+                    <div id="reportCardContent" class="skill-bars">
+                        <div class="empty-state">
+                            <p>No analysis yet. Upload your first match video to see how you performed!</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ═══ COL 2: Recent Matches ═════════════════════ -->
+            <div class="grid-col-right tab-panel" id="panel-matches" style="display:none;">
+                <section class="video-history glassmorphism">
+                    <div class="section-header-row">
+                        <div>
+                            <h3>Recent Matches</h3>
+                            <p class="section-subtitle">Your uploaded sessions</p>
+                        </div>
+                        <button id="toggleSelectBtn" class="select-mode-btn">Select</button>
+                    </div>
+                    <!-- Bulk delete bar (hidden until items selected) -->
+                    <div id="bulkDeleteBar" class="bulk-delete-bar" style="display:none;">
+                        <span id="bulkCountLabel">0 selected</span>
+                        <div class="bulk-actions">
+                            <button id="selectAllBtn" class="btn outline-btn sm-btn">Select All</button>
+                            <button id="bulkDeleteBtn" class="btn danger-btn sm-btn">Delete Selected</button>
+                        </div>
+                    </div>
+                    <div id="videoList" class="video-list">
+                        <div class="empty-state">
+                            <p>No videos yet. Upload a match from behind the net to get your first goalkeeper report card!</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ═══ COL 3 / Full-width on desktop: Trends ════ -->
+            <div class="grid-col-trends tab-panel" id="panel-trends" style="display:none;">
+                <section class="analytics-trends glassmorphism">
+                    <div class="section-header-row">
+                        <div>
+                            <h3>Performance Trends</h3>
+                            <p class="section-subtitle">Tracking your growth</p>
+                        </div>
+                        <div class="time-range-pills">
+                            <button class="pill-btn active" data-range="1m">4 Weeks</button>
+                            <button class="pill-btn" data-range="3m">3 Months</button>
+                            <button class="pill-btn" data-range="all">All Time</button>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 300px; width: 100%; margin-top: 1rem;">
+                        <canvas id="trendsChart"></canvas>
+                    </div>
+                </section>
+            </div>
+
+        </div><!-- /.dashboard-grid-v2 -->
+
+    </main>
+
+    <!-- ── Sticky Mobile Upload FAB ──────────────────────────── -->
+    <div class="upload-fab-wrap">
+        <button id="uploadFabBtn" class="upload-fab" aria-label="Upload match video">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Upload Match</span>
+        </button>
+    </div>
+
+    <!-- ── Upload Modal ─────────────────────────────────────── -->
+    <div id="uploadModal" class="modal-overlay" style="display:none;">
+        <div class="modal glassmorphism">
+            <div class="modal-header">
+                <h3>Upload Match Videos</h3>
+                <button class="modal-close" id="closeUploadModal">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height:70vh; overflow-y:auto; overflow-x:hidden;">
+                <!-- Game Info -->
+                <div class="game-info-row">
+                    <div class="input-group">
+                        <label for="teamName">Your Team</label>
+                        <input type="text" id="teamName" placeholder="e.g. River FC" list="teamSuggestions" autocomplete="off">
+                        <datalist id="teamSuggestions">
+                            <option value="River FC">
+                            <option value="Alliance FC">
+                            <option value="Westside SC">
+                            <option value="North Stars">
+                            <option value="Eastside United">
+                        </datalist>
+                    </div>
+                    <div class="game-info-vs">vs</div>
+                    <div class="input-group">
+                        <label for="opponentName">Opponent Team</label>
+                        <input type="text" id="opponentName" placeholder="e.g. Westside FC" autocomplete="off">
+                    </div>
+                </div>
+                <div class="input-group" style="margin-top: 12px;">
+                    <label for="gameDate">Game Date</label>
+                    <input type="date" id="gameDate">
+                </div>
+                <!-- Goalie Identity (used by AI to identify the keeper) -->
+                <div class="game-info-row" style="margin-top: 12px;">
+                    <div class="input-group">
+                        <label for="goalieNumber">Goalie # <span class="field-hint">Jersey number</span></label>
+                        <input type="number" id="goalieNumber" placeholder="e.g. 1" min="1" max="99" style="max-width:100%;">
+                    </div>
+                    <div class="input-group">
+                        <label for="jerseyColor">Primary Goalie Jersey Color</label>
+                        <select id="jerseyColor" class="color-select">
+                            <option value="">Select color…</option>
+                            <option value="Neon Yellow">🟡 Neon Yellow</option>
+                            <option value="Bright Orange">🟠 Bright Orange</option>
+                            <option value="Red">🔴 Red</option>
+                            <option value="Hot Pink">🩷 Hot Pink</option>
+                            <option value="Purple">🟣 Purple</option>
+                            <option value="Royal Blue">🔵 Royal Blue</option>
+                            <option value="Sky Blue">🩵 Sky Blue</option>
+                            <option value="Neon Green">🟢 Neon Green</option>
+                            <option value="Forest Green">🌲 Forest Green</option>
+                            <option value="White">⚪ White</option>
+                            <option value="Black">⚫ Black</option>
+                            <option value="Grey">🩶 Grey</option>
+                            <option value="Navy">🫐 Navy</option>
+                            <option value="Teal">🩵 Teal</option>
+                            <option value="Maroon">🟥 Maroon</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Camera Setup Guide Banner -->
+                <div class="upload-guide-banner" id="uploadGuideBanner" style="display:none; margin-top: 16px; padding: 16px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="display: flex; gap: 12px;">
+                            <span style="font-size: 28px;">🎥</span>
+                            <div>
+                                <h4 style="margin:0 0 8px; color: var(--accent-blue); font-size: 16px;">Camera Setup Tips</h4>
+                                <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: var(--text-secondary); line-height: 1.5;">
+                                    <li><strong>Position:</strong> Phone on a tripod behind the goal, elevated 6-8 feet.</li>
+                                    <li><strong>Angle:</strong> Use 0.5x wide-angle. Ensure full goal + half of the 18yd box is visible.</li>
+                                    <li><strong>Action:</strong> Film the full half without stopping. Don't zoom or pan!</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <button id="dismissGuideBtn" style="background:none; border:none; color: var(--text-tertiary); cursor:pointer; font-size: 20px; padding: 0 4px;" title="Dismiss">&times;</button>
+                    </div>
+                </div>
+
+                <div class="drop-zone" id="dropZone" style="margin-top: 16px;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <p>Drag &amp; drop up to 10 videos here</p>
+                    <p class="muted-text">or</p>
+                    <label class="btn outline-btn sm-btn" for="fileInput">Browse Files</label>
+                    <input type="file" id="fileInput" accept="video/*" multiple style="display:none;">
+                    <p class="upload-hint">⚠ Upload <strong>all recordings from the same game</strong> together.<br>Hold <kbd>⌘ Cmd</kbd> + Click to select multiple clips at once. Do not mix games in one upload.</p>
+                </div>
+                <!-- Selected files list -->
+                <div id="fileList" style="display:none; margin-top:16px;">
+                    <div id="fileListItems"></div>
+                </div>
+                <!-- Overall progress -->
+                <div id="uploadProgress" style="display:none; margin-top: 16px;">
+                    <p class="muted-text" id="progressText" style="text-align:center; margin-bottom: 8px;">Uploading...</p>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%;transition:width 0.3s;"></div></div>
+                </div>
+                <p id="uploadError" class="error-msg"></p>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelUploadBtn" class="btn outline-btn">Cancel</button>
+                <button id="submitUploadBtn" class="btn primary-btn">Upload Videos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-overlay" style="display:none;">
+        <div class="modal glassmorphism" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3>Delete Analysis?</h3>
+                <button class="modal-close" id="closeDeleteModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="delete-warning-icon">🗑️</div>
+                <p class="delete-warning-title">This cannot be undone.</p>
+                <p class="muted-text" style="text-align:center; margin-top: 0.5rem;">All data related to this analysis — including uploaded videos, AI-generated stats, skill ratings, and coaching notes — will be permanently removed.</p>
+                <p id="deleteSessionLabel" class="delete-session-label"></p>
+            </div>
+            <div class="modal-footer" style="gap: 0.75rem;">
+                <button id="cancelDeleteBtn" class="btn outline-btn">Keep It</button>
+                <button id="confirmDeleteBtn" class="btn danger-btn">Delete Everything</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Session Modal -->
+    <div id="editModal" class="modal-overlay" style="display:none;">
+        <div class="modal glassmorphism" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>Edit Match Details</h3>
+                <button class="modal-close" id="closeEditModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="game-info-row">
+                    <div class="input-group">
+                        <label for="editTeamName">Your Team</label>
+                        <input type="text" id="editTeamName" placeholder="e.g. River FC" autocomplete="off">
+                    </div>
+                    <div class="game-info-vs">vs</div>
+                    <div class="input-group">
+                        <label for="editOpponentName">Opponent Team</label>
+                        <input type="text" id="editOpponentName" placeholder="e.g. Westside FC" autocomplete="off">
+                    </div>
+                </div>
+                <div class="input-group" style="margin-top: 12px;">
+                    <label for="editGameDate">Game Date</label>
+                    <input type="date" id="editGameDate">
+                </div>
+                <p id="editError" class="error-msg" style="display:none;"></p>
+            </div>
+            <div class="modal-footer" style="gap: 0.75rem;">
+                <button id="cancelEditBtn" class="btn outline-btn">Cancel</button>
+                <button id="saveEditBtn" class="btn primary-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Modal -->
+    <div id="analysisModal" class="modal-overlay" style="display:none;">
+        <div class="modal glassmorphism" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="analysisTitle">Full Analysis</h3>
+                <button class="modal-close" id="closeAnalysisModal">&times;</button>
+            </div>
+            <div id="highlightVideoContainer" style="display:none; margin: 16px 24px 0 24px;">
+                <video id="highlightVideoPlayer" controls style="width: 100%; border-radius: 8px; background: #000;"></video>
+            </div>
+            <div class="modal-body" id="analysisContent">
+                <p class="muted-text">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-overlay" style="display:none;">
+        <div class="modal glassmorphism" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3>Profile Settings</h3>
+                <button class="modal-close" id="closeSettingsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="muted-text" style="margin-bottom: 1rem;">Update your profile so the AI can tailor feedback to your age and level.</p>
+                <div class="input-group">
+                    <label for="settingsAgeGroup">Age Group</label>
+                    <select id="settingsAgeGroup" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: var(--text-primary); border-radius: 10px; padding: 0.75rem 1rem; font-family: 'Outfit', sans-serif; font-size: 0.95rem; outline: none;">
+                        <option value="" disabled selected>Select age group...</option>
+                        <option value="U8-U10">U8 - U10</option>
+                        <option value="U11-U13">U11 - U13</option>
+                        <option value="U14-U16">U14 - U16</option>
+                        <option value="U17-U18">U17 - U18</option>
+                    </select>
+                </div>
+                <p id="settingsStatusMsg" class="status-msg" style="margin-top: 1rem;"></p>
+            </div>
+            <div class="modal-footer" style="gap: 0.75rem;">
+                <button id="cancelSettingsBtn" class="btn outline-btn">Cancel</button>
+                <button id="saveSettingsBtn" class="btn primary-btn">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ted Chatbot Widget -->
+    <link rel="stylesheet" href="/css/chat-widget.css?v=10">
+    <script type="module" src="/js/chat-widget.js?v=11"></script>
+
+    <!-- Tab switching + FAB logic (inline, tiny) -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // ── Tab Navigation ──────────────────────────────────
+        const tabs = document.querySelectorAll('.dash-tab');
+        const panels = document.querySelectorAll('.tab-panel');
+
+        function activateTab(tabId) {
+            tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+            panels.forEach(p => {
+                const match = p.id === `panel-${tabId}`;
+                p.style.display = match ? '' : 'none';
+                p.classList.toggle('panel-active', match);
+            });
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => activateTab(tab.dataset.tab));
+        });
+
+        // ── FAB → Upload Modal ──────────────────────────────
+        const fab = document.getElementById('uploadFabBtn');
+        if (fab) {
+            fab.addEventListener('click', () => {
+                document.getElementById('uploadVideoBtn')?.click();
+            });
+        }
+
+        // ── Update hero avatar initials from name ───────────
+        const observer = new MutationObserver(() => {
+            const name = document.getElementById('welcomeMsg')?.textContent || '';
+            const match = name.match(/Welcome back,?\s+(\S+)/i);
+            if (match) {
+                const initials = match[1].slice(0, 2).toUpperCase();
+                const av = document.getElementById('heroAvatar');
+                if (av) av.textContent = initials;
+            }
+        });
+        const wm = document.getElementById('welcomeMsg');
+        if (wm) observer.observe(wm, { childList: true, subtree: true, characterData: true });
+
+        // ── Radar badge sync ────────────────────────────────
+        const ratingEl = document.getElementById('overallRating');
+        const radarBadge = document.getElementById('radarOverallBadge');
+        const radarScore = document.getElementById('radarScore');
+        if (ratingEl && radarBadge) {
+            new MutationObserver(() => {
+                const v = ratingEl.textContent.trim();
+                if (v && v !== '—') {
+                    radarScore.textContent = v.replace('/10', '');
+                    radarBadge.style.display = 'flex';
+                }
+            }).observe(ratingEl, { childList: true, subtree: true, characterData: true });
+        }
+    });
+    </script>
+
+    <script type="module" src="/js/firebase-config.js?v=24"></script>
+    <script type="module" src="/js/dashboard/main.js?v=26"></script>
+</body>
+</html>

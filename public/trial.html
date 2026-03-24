@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Keeper Coach - 7-Day Free Trial</title>
-    <!-- Add SEO Meta Tags -->
-    <meta name="description" content="Finally, a coaching experience built just for goalkeepers. Track development, deliver elite training, and stop guessing about your keepers' growth. Claim your free trial.">
+    <title>My Keeper Coach — Train Like an Elite Goalkeeper</title>
+    <meta name="description" content="You're a goalkeeper. Own it. Track every rep, get AI-powered match reports overnight, and see exactly how you're growing. Free trial — no credit card.">
     
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="stylesheet" href="/css/trial.css">
@@ -24,22 +23,42 @@
     <!-- Hero Section -->
     <header class="trial-hero glassmorphism">
         <div class="scarcity-banner">
-            <span class="pulse-dot"></span> <span id="spots-remaining">30</span> Beta Trial Spots Remaining
+            <span class="pulse-dot"></span> <span id="spots-remaining">30</span> Beta Spots Left
         </div>
-        <h1>Stop Guessing. Start <span>Developing Elite Goalkeepers</span>.</h1>
-        <p class="hero-sub">Track every rep. Deliver training that actually fits your keeper's stage. Know exactly what's working — and what's not.</p>
+        <h1>Stop Waiting for Someone to Develop You.<br><span>Do It Yourself.</span></h1>
+        <p class="hero-sub">You're a goalkeeper. That means you work twice as hard for half the recognition. This is the tool that finally gives you the data, the feedback, and the proof of your own growth.</p>
         
         <div class="hero-cta">
-            <a href="/signup.html" class="btn primary-btn large-btn">Claim Your Spot — Free Trial</a>
+            <a href="/signup.html" class="btn primary-btn large-btn">Claim Your Free Spot</a>
             <p class="risk-reversal">Full access. No credit card. No excuses.</p>
         </div>
     </header>
 
+    <!-- Email Capture Section -->
+    <section class="email-capture-section">
+        <div class="container">
+            <div class="email-capture-card glassmorphism">
+                <div class="email-capture-inner">
+                    <div class="email-capture-text">
+                        <h3>Get your first AI report card — free.</h3>
+                        <p>Drop your email. We'll show you how to get your first match analysis in under 5 minutes.</p>
+                    </div>
+                    <form class="email-capture-form" id="ckEmailForm">
+                        <input type="email" id="ckEmail" placeholder="your@email.com" required autocomplete="email" />
+                        <button type="submit" class="btn primary-btn ck-submit-btn" id="ckSubmitBtn">Get Early Access</button>
+                    </form>
+                    <p class="email-capture-note" id="ckSuccessMsg" style="display:none;">✅ You're in! Check your inbox.</p>
+                    <p class="email-capture-disclaimer">No spam. No credit card. Unsubscribe anytime.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Emotional Core / The Problem -->
     <section class="emotional-core">
         <div class="container">
-            <h2>Goalkeepers don't get afterthought coaching anymore.</h2>
-            <p class="lead-text">20 minutes of shots. No feedback. No structure. That's not coaching — that's babysitting a glove. Your keepers deserve better, and now you have the tools to deliver it.</p>
+            <h2>Goalkeepers don't wait for permission to be great.</h2>
+            <p class="lead-text">20 minutes of random shots. No feedback. No plan. That's not training — that's just showing up. You're better than that. Now you have the data to prove it to everyone else.</p>
         </div>
     </section>
 
@@ -49,45 +68,82 @@
             <!-- Feature 1 -->
             <div class="feature-card glassmorphism">
                 <div class="feature-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <!-- Goalkeeper glove -->
-                        <rect x="8" y="28" width="14" height="28" rx="4" fill="rgba(0,230,118,0.15)" stroke="#00E676"/>
-                        <rect x="22" y="20" width="8" height="18" rx="4" fill="rgba(0,230,118,0.15)" stroke="#00E676"/>
-                        <rect x="30" y="22" width="8" height="16" rx="4" fill="rgba(0,230,118,0.15)" stroke="#00E676"/>
-                        <rect x="38" y="24" width="8" height="14" rx="4" fill="rgba(0,230,118,0.15)" stroke="#00E676"/>
-                        <rect x="46" y="28" width="8" height="10" rx="4" fill="rgba(0,230,118,0.15)" stroke="#00E676"/>
-                        <line x1="8" y1="36" x2="54" y2="36" stroke="#00E676" stroke-opacity="0.5"/>
+                    <!-- Icon: Goalkeeper glove (palm facing out, simplified) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- Palm base -->
+                        <rect x="14" y="34" width="24" height="20" rx="5" fill="rgba(0,230,118,0.18)" stroke="#00E676" stroke-width="2.5"/>
+                        <!-- Thumb -->
+                        <rect x="6" y="36" width="10" height="14" rx="5" fill="rgba(0,230,118,0.18)" stroke="#00E676" stroke-width="2.5"/>
+                        <!-- Finger 1 -->
+                        <rect x="14" y="20" width="6" height="18" rx="3" fill="rgba(0,230,118,0.18)" stroke="#00E676" stroke-width="2.5"/>
+                        <!-- Finger 2 -->
+                        <rect x="22" y="16" width="6" height="22" rx="3" fill="rgba(0,230,118,0.18)" stroke="#00E676" stroke-width="2.5"/>
+                        <!-- Finger 3 -->
+                        <rect x="30" y="18" width="6" height="20" rx="3" fill="rgba(0,230,118,0.18)" stroke="#00E676" stroke-width="2.5"/>
+                        <!-- Stats lines to the right -->
+                        <line x1="42" y1="20" x2="58" y2="20" stroke="#00E676" stroke-width="2" stroke-opacity="0.9"/>
+                        <line x1="42" y1="30" x2="54" y2="30" stroke="#00E676" stroke-width="2" stroke-opacity="0.6"/>
+                        <line x1="42" y1="40" x2="56" y2="40" stroke="#00E676" stroke-width="2" stroke-opacity="0.8"/>
+                        <line x1="42" y1="50" x2="50" y2="50" stroke="#00E676" stroke-width="2" stroke-opacity="0.5"/>
+                        <circle cx="42" cy="20" r="2" fill="#00E676"/>
+                        <circle cx="42" cy="30" r="2" fill="#00E676"/>
+                        <circle cx="42" cy="40" r="2" fill="#00E676"/>
+                        <circle cx="42" cy="50" r="2" fill="#00E676"/>
                     </svg>
                 </div>
-                <h3>Know Exactly Where They Stand</h3>
-                <p>Visualize progress with our dynamic Radar Chart. Track the 8 core pillars of goalkeeper development across every session and match.</p>
+                <h3>See Exactly Where You Stand</h3>
+                <p>Your performance, visualized. A dynamic Radar Chart tracks 8 core goalkeeper pillars across every session and match so you always know what's sharp — and what needs reps.</p>
             </div>
             <!-- Feature 2 -->
             <div class="feature-card glassmorphism">
                 <div class="feature-icon">
+                    <!-- Icon: Soccer ball + AI scan beams -->
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#00E676" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="32" cy="32" r="24" fill="rgba(0,230,118,0.1)" stroke="#00E676"/>
-                        <polygon points="32,16 37,26 49,26 39,33 43,45 32,38 21,45 25,33 15,26 27,26" fill="rgba(0,230,118,0.25)" stroke="#00E676" stroke-width="2"/>
+                        <!-- Ball -->
+                        <circle cx="28" cy="34" r="18" fill="rgba(0,230,118,0.1)" stroke="#00E676"/>
+                        <!-- Pentagon pattern on ball -->
+                        <polygon points="28,22 34,28 32,36 24,36 22,28" fill="rgba(0,230,118,0.3)" stroke="#00E676" stroke-width="1.5"/>
+                        <line x1="28" y1="22" x2="28" y2="16" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.5"/>
+                        <line x1="34" y1="28" x2="41" y2="25" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.5"/>
+                        <line x1="32" y1="36" x2="37" y2="42" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.5"/>
+                        <line x1="24" y1="36" x2="19" y2="42" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.5"/>
+                        <line x1="22" y1="28" x2="15" y2="25" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.5"/>
+                        <!-- AI scan lines -->
+                        <line x1="48" y1="14" x2="56" y2="8" stroke="#00E676" stroke-width="2" stroke-opacity="0.8"/>
+                        <line x1="50" y1="18" x2="60" y2="16" stroke="#00E676" stroke-width="2" stroke-opacity="0.5"/>
+                        <line x1="50" y1="24" x2="60" y2="26" stroke="#00E676" stroke-width="2" stroke-opacity="0.6"/>
+                        <circle cx="46" cy="16" r="4" fill="rgba(0,230,118,0.3)" stroke="#00E676" stroke-width="2"/>
+                        <line x1="43" y1="19" x2="40" y2="24" stroke="#00E676" stroke-width="1.5"/>
                     </svg>
                 </div>
-                <h3>AI Match Reports — Built Overnight</h3>
-                <p>Upload match footage. Get a professional report card within 5 hours. No manual notes. No guessing. Just data-backed insight on every decision your keeper made.</p>
+                <h3>AI Match Reports — Yours Overnight</h3>
+                <p>Upload your match footage. Your personal report card lands within 5 hours — data-backed insight on every decision, every save, every moment. No coach required.</p>
             </div>
             <!-- Feature 3 -->
             <div class="feature-card glassmorphism">
                 <div class="feature-icon">
+                    <!-- Icon: Goal post with progression staircase -->
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#00E676" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <!-- Goal net / shield -->
-                        <path d="M8 12 L32 6 L56 12 L56 36 Q56 52 32 58 Q8 52 8 36 Z" fill="rgba(0,230,118,0.1)" stroke="#00E676"/>
-                        <line x1="8" y1="24" x2="56" y2="24" stroke="#00E676" stroke-opacity="0.4"/>
-                        <line x1="8" y1="38" x2="56" y2="38" stroke="#00E676" stroke-opacity="0.4"/>
-                        <line x1="22" y1="12" x2="20" y2="52" stroke="#00E676" stroke-opacity="0.4"/>
-                        <line x1="32" y1="6" x2="32" y2="58" stroke="#00E676" stroke-opacity="0.4"/>
-                        <line x1="42" y1="12" x2="44" y2="52" stroke="#00E676" stroke-opacity="0.4"/>
+                        <!-- Goal frame -->
+                        <line x1="6" y1="12" x2="6" y2="52" stroke="#00E676" stroke-width="3"/>
+                        <line x1="58" y1="12" x2="58" y2="52" stroke="#00E676" stroke-width="3"/>
+                        <line x1="6" y1="12" x2="58" y2="12" stroke="#00E676" stroke-width="3"/>
+                        <!-- Net lines vertical -->
+                        <line x1="18" y1="12" x2="18" y2="52" stroke="#00E676" stroke-width="1" stroke-opacity="0.35"/>
+                        <line x1="30" y1="12" x2="30" y2="52" stroke="#00E676" stroke-width="1" stroke-opacity="0.35"/>
+                        <line x1="42" y1="12" x2="42" y2="52" stroke="#00E676" stroke-width="1" stroke-opacity="0.35"/>
+                        <!-- Net lines horizontal -->
+                        <line x1="6" y1="24" x2="58" y2="24" stroke="#00E676" stroke-width="1" stroke-opacity="0.35"/>
+                        <line x1="6" y1="36" x2="58" y2="36" stroke="#00E676" stroke-width="1" stroke-opacity="0.35"/>
+                        <!-- Progression staircase inside goal -->
+                        <rect x="10" y="44" width="8" height="8" rx="1" fill="rgba(0,230,118,0.25)" stroke="#00E676" stroke-width="1.5"/>
+                        <rect x="22" y="38" width="8" height="14" rx="1" fill="rgba(0,230,118,0.35)" stroke="#00E676" stroke-width="1.5"/>
+                        <rect x="34" y="30" width="8" height="22" rx="1" fill="rgba(0,230,118,0.5)" stroke="#00E676" stroke-width="1.5"/>
+                        <rect x="46" y="20" width="8" height="32" rx="1" fill="rgba(0,230,118,0.7)" stroke="#00E676" stroke-width="1.5"/>
                     </svg>
                 </div>
-                <h3>Built for Every Stage — U8 to U18</h3>
-                <p>The system adapts to your keeper's age and stage. No cookie-cutter drills. No burnout. The right challenge at the right moment, every time.</p>
+                <h3>Built for Where YOU Are — U8 to U18</h3>
+                <p>The platform adapts to your exact age and level. No cookie-cutter drills built for someone else. The right challenge at the right moment — every single time.</p>
             </div>
         </div>
     </section>
@@ -95,8 +151,8 @@
     <!-- Data Handling / Legal Trust & Safety -->
     <section class="trust-safety">
         <div class="container glassmorphism safety-card">
-            <h2>Your Athletes. Your Data. Always.</h2>
-            <p>We collect only what's needed to track development — nothing more. Video is stored securely and never shared. Built with youth athlete protection as the baseline, not an afterthought.</p>
+            <h2>Your Game. Your Data. Your Call.</h2>
+            <p>We collect only what it takes to track your growth — nothing more. Your footage is stored securely and never shared with anyone. Privacy is baked in, not bolted on.</p>
             <p class="coppa-badge">COPPA Compliant &amp; Privacy First</p>
         </div>
     </section>
@@ -104,9 +160,9 @@
     <!-- Final CTA -->
     <section class="final-cta">
         <div class="container">
-            <h2>Your best keepers are waiting to be developed.</h2>
-            <p>Join coaches who refuse to leave their goalkeepers behind.</p>
-            <a href="/signup.html" class="btn primary-btn large-btn">Start Developing — Free</a>
+            <h2>The keepers who make it don't wait for someone else to see their potential.</h2>
+            <p>They track it. They prove it. They show up with receipts. Be that keeper.</p>
+            <a href="/signup.html" class="btn primary-btn large-btn">Start Training — Free</a>
             <p class="legal-disclaimer">By claiming your trial, you agree to our <a href="/terms.html">Terms of Service</a> and <a href="/privacy.html">Privacy Policy</a>.</p>
         </div>
     </section>
@@ -124,5 +180,51 @@
     </footer>
 
     <script src="/js/trial.js"></script>
+    <script>
+        // ============================================================
+        // ConvertKit Email Capture
+        // Replace CK_FORM_ID_HERE with your ConvertKit Form ID
+        // Find it in ConvertKit: Forms → your form → Settings → ID
+        // ============================================================
+        const CK_FORM_ID = '9241511';
+
+        document.getElementById('ckEmailForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('ckEmail').value.trim();
+            const btn = document.getElementById('ckSubmitBtn');
+            const successMsg = document.getElementById('ckSuccessMsg');
+
+            if (!email || CK_FORM_ID === 'CK_FORM_ID_HERE') {
+                // If not configured yet, fall through to signup page
+                window.location.href = '/signup.html?email=' + encodeURIComponent(email);
+                return;
+            }
+
+            btn.textContent = 'Joining...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`https://api.convertkit.com/v3/forms/${CK_FORM_ID}/subscribe`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: 'njC1ApCi2RapYjuzt1Qq4w', email })
+                });
+
+                if (res.ok) {
+                    document.getElementById('ckEmailForm').style.display = 'none';
+                    successMsg.style.display = 'block';
+                    // After 1.5s, take them to signup with email pre-filled
+                    setTimeout(() => {
+                        window.location.href = '/signup.html?email=' + encodeURIComponent(email);
+                    }, 1500);
+                } else {
+                    throw new Error('API error');
+                }
+            } catch (err) {
+                // Fallback: just go to signup
+                window.location.href = '/signup.html?email=' + encodeURIComponent(email);
+            }
+        });
+    </script>
 </body>
 </html>
