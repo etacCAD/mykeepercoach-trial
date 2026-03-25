@@ -58,7 +58,16 @@ class ChatWidget {
         container.innerHTML = `
             <div class="chat-widget-panel" id="tedChatPanel">
                 <div class="chat-widget-header">
-                    <h3 class="chat-widget-title">Coach <span>Ted</span> 🧤</h3>
+                    <h3 class="chat-widget-title" style="display: flex; align-items: center; gap: 6px;">
+                        Coach <span>Ted</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                            <circle cx="12" cy="5" r="2"></circle>
+                            <path d="M12 7v4"></path>
+                            <line x1="8" y1="16" x2="8.01" y2="16"></line>
+                            <line x1="16" y1="16" x2="16.01" y2="16"></line>
+                        </svg>
+                    </h3>
                     <button class="chat-widget-close" id="tedChatClose">×</button>
                 </div>
                 <div class="chat-widget-messages" id="tedChatMessages"></div>
@@ -71,9 +80,10 @@ class ChatWidget {
                         </svg>
                     </button>
                 </div>
-            </div>
             <button class="chat-widget-button" id="tedChatToggle">
-                💬
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
             </button>
         `;
 
@@ -175,7 +185,23 @@ class ChatWidget {
             console.error('[Ted] Chat error:', error);
             this.removeTyping();
             this.messages.pop(); // Remove the user message from local history
-            this.addMessage("Sorry, I got a little distracted! Could you try sending that again?", 'bot');
+
+            const errorReplies = [
+                "Well string me up and call me a piñata, I completely missed that pass! Care to try again?",
+                "Oof, my brain just did a total air-kick on that one. Can you repeat the question?",
+                "Looks like my connection just got slide-tackled into the stands! Mind giving that another go?",
+                "I just got caught watching the daisies grow in the penalty box. Could you ask that one more time?",
+                "VAR is currently reviewing my last thought... and it's a no-goal. Care to take another shot?",
+                "Like a bad pass in the midfield, I totally lost track of that. Give me another try!",
+                "Sorry, I was too busy daydreaming about saving a top-bin PK! Could you repeat that?",
+                "I just got caught totally flat-footed on that one! Could you fire it at me again?",
+                "Oops! I let that one slip right through my gloves. What were you saying?",
+                "Looks like I just got caught on the wrong side of an offside trap. Can you repeat that?",
+                "I'm putting my hand up apologizing to the defense for that one. Care to ask again?",
+                "That question must have taken a wicked deflection, because I totally lost it. Give it another go?"
+            ];
+            const randomReply = errorReplies[Math.floor(Math.random() * errorReplies.length)];
+            this.addMessage(randomReply, 'bot');
         }
     }
 }
