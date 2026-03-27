@@ -1,8 +1,7 @@
 import { onCall } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { VertexAI } from "@google-cloud/vertexai";
-
-const GEMINI_CHAT_MODEL = "gemini-1.5-flash"; // Stable Vertex AI chat model
+import { GoogleGenAI } from "@google/genai";
+import { GEMINI_MODEL } from "../constants";
 
 const BASE_PROMPT = `You are "Ted", an AI chatbot built to support My Keeper Coach users.
 Your personality is inspired by Ted Lasso: unfailingly positive, encouraging, kid/young-adult friendly, and highly supportive.
@@ -34,10 +33,10 @@ interface ChatMessage {
 
 /**
  * Callable: tedChat
- * Handles chatbot interactions with Gemini via Vertex AI. Works for both authenticated and anonymous users.
+ * Handles chatbot interactions with Gemini via Google AI Studio.
  */
 export const tedChat = onCall(
-  { timeoutSeconds: 30, invoker: "public" },
+  { timeoutSeconds: 30, invoker: "public", secrets: ["GEMINI_API_KEY"] },
   async (request) => {
     const { messages, context } = request.data as {
       messages: ChatMessage[];
@@ -51,30 +50,27 @@ export const tedChat = onCall(
 
     const uid = request.auth?.uid || null;
 
-    const projectId = admin.app().options.projectId || process.env.GCLOUD_PROJECT;
-    if (!projectId) throw new Error("Could not determine Firebase projectId for Vertex AI");
-    
-    const vertex_ai = new VertexAI({ project: projectId, location: "us-central1" });
-    const model = vertex_ai.getGenerativeModel({
-      model: GEMINI_CHAT_MODEL,
-      systemInstruction: {
-        role: "system",
-        parts: [{
-          text: BASE_PROMPT + (uid ? "\n(Logged in user context: " + JSON.stringify(context) + ")" : "\n(Pre-login visitor)")
-        }]
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY is not set in the environment.");
+
+    const ai = new GoogleGenAI({ apiKey });
+    const systemInstructionText = BASE_PROMPT + (uid ? "\n(Logged in user context: " + JSON.stringify(context) + ")" : "\n(Pre-login visitor)");
+
+    const result = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: messages,
+      config: {
+        systemInstruction: systemInstructionText,
       }
     });
 
-    const history = messages.slice(0, -1);
-    const latestMessage = messages[messages.length - 1].parts[0].text;
-
-    const chat = model.startChat({ history });
-    const result = await chat.sendMessage(latestMessage);
-    const responseText = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const responseText = result.text;
     
     if (!responseText) {
       throw new Error("No text response received from Gemini");
     }
+
+    const latestMessage = messages[messages.length - 1].parts[0].text;
 
     // Log to Firestore
     try {

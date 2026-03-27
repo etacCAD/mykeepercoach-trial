@@ -1,7 +1,6 @@
 import * as admin from "firebase-admin";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const GEMINI_MODEL = "gemini-2.5-flash";
+import { GoogleGenAI } from "@google/genai";
+import { GEMINI_MODEL } from "../constants";
 
 const BASE_PROMPT = `You are "Ted", an AI chatbot built to support My Keeper Coach users.
 Your personality is inspired by Ted Lasso: unfailingly positive, encouraging, kid/young-adult friendly, and highly supportive.
@@ -22,29 +21,45 @@ export interface ChatMessage {
 export interface ChatWithTedParams {
   messages: ChatMessage[];
   uid?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   context?: any;
 }
 
 export async function chatWithTed({ messages, uid, context }: ChatWithTedParams): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not set");
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set in the environment");
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    systemInstruction: BASE_PROMPT + (uid ? "\n(Logged in user context: " + JSON.stringify(context) + ")" : "\n(Pre-login user)"),
-  });
+  const ai = new GoogleGenAI({ apiKey });
 
-  // Extract the latest message and history. History must strictly alternate or we can just send the last N messages to startChat
+  const sysInstruction = BASE_PROMPT + (uid ? "\n(Logged in user context: " + JSON.stringify(context) + ")" : "\n(Pre-login user)");
+
+  // Extract the latest message and history.
   const history = messages.slice(0, -1);
   const latestMessage = messages[messages.length - 1].parts[0].text;
 
-  const chat = model.startChat({
-    history: history,
+  // Format history for @google/genai
+  const mappedHistory = history.map(msg => ({
+    role: msg.role === "model" ? "model" : "user",
+    parts: [{ text: msg.parts[0].text }]
+  }));
+
+
+  
+  const allMessages = [...mappedHistory, { role: "user", parts: [{ text: latestMessage }] }];
+
+  const result = await ai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: allMessages as any,
+    config: {
+      systemInstruction: sysInstruction,
+    }
   });
 
-  const result = await chat.sendMessage(latestMessage);
-  const responseText = result.response.text();
+  const responseText = result.text;
+
+  if (!responseText) {
+    throw new Error("No text response received from Gemini");
+  }
 
   // Log the conversation to Firestore
   try {
