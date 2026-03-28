@@ -25,6 +25,7 @@
     "rules": "storage.rules"
   },
   "hosting": {
+    "site": "goalie-coach-dev-11a17",
     "public": "public",
     "ignore": [
       "firebase.json",
