@@ -731,29 +731,63 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Group files by Time Window (3 hours max per game)
+        // Group files by Time Window (3 hours max) AND Unique Session UUIDs
         batchFilesGrouped = {};
         batchTotalFiles = files.length;
         
-        // Sort files chronologically
-        files.sort((a, b) => a.lastModified - b.lastModified);
+        // Sort files chronologically, then alphabetically if times are identical
+        files.sort((a, b) => {
+            if (a.lastModified === b.lastModified) {
+                return a.name.localeCompare(b.name);
+            }
+            return a.lastModified - b.lastModified;
+        });
 
         let currentGroupKey = null;
         let currentGroupStartTime = null;
+        let currentGroupUUID = null;
 
         files.forEach(f => {
-            // If we don't have a group started, OR the file falls > 3 hours (10800000 ms) after the current group's first file
-            if (!currentGroupStartTime || (f.lastModified - currentGroupStartTime) > 3 * 60 * 60 * 1000) {
+            // Check if filename contains a standard UUID (like from Veo, Trace, or iOS exports)
+            const match = f.name.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+            const fileUUID = match ? match[0] : null;
+
+            let forceNewGroup = false;
+
+            if (!currentGroupStartTime) {
+                forceNewGroup = true;
+            } else {
+                // Rule 1: Time difference strictly > 3 hours
+                if ((f.lastModified - currentGroupStartTime) > 3 * 60 * 60 * 1000) {
+                    forceNewGroup = true;
+                }
+                // Rule 2: Both files have a UUID, but they represent entirely different sessions!
+                else if (fileUUID && currentGroupUUID && fileUUID !== currentGroupUUID) {
+                    forceNewGroup = true;
+                }
+            }
+
+            if (forceNewGroup) {
                 currentGroupStartTime = f.lastModified;
+                currentGroupUUID = fileUUID;
+
                 const startDate = new Date(currentGroupStartTime);
-                
-                // Format e.g., "Jan 1, 2026 - 10:30 AM"
                 const datePart = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 const timePart = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
                 
-                currentGroupKey = `${datePart} (${timePart})`;
+                let key = `${datePart} (${timePart})`;
+                
+                // If games share the exact same minute because of export, deduplicate the label
+                let dedupeCounter = 1;
+                while (batchFilesGrouped[key]) {
+                    dedupeCounter++;
+                    key = `${datePart} (${timePart}) - Game ${dedupeCounter}`;
+                }
+                
+                currentGroupKey = key;
                 batchFilesGrouped[currentGroupKey] = [];
             }
+            
             batchFilesGrouped[currentGroupKey].push(f);
         });
 
