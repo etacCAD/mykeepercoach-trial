@@ -228,14 +228,14 @@
                             <button class="pill-btn" data-range="all">All Time</button>
                         </div>
                     </div>
-                    <!-- Custom skill legend -->
-                    <div id="trendsLegend" style="display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 6px; padding: 0 2px;">
-                        <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;color:rgba(255,255,255,0.75);"><span style="width:10px;height:10px;border-radius:50%;background:#3b82f6;display:inline-block;flex-shrink:0;"></span>Distribution</span>
-                        <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;color:rgba(255,255,255,0.75);"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;"></span>Shot Stopping</span>
-                        <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;color:rgba(255,255,255,0.75);"><span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>Positioning</span>
-                        <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;color:rgba(255,255,255,0.75);"><span style="width:10px;height:10px;border-radius:50%;background:#8b5cf6;display:inline-block;flex-shrink:0;"></span>Cross Management</span>
-                        <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;color:rgba(255,255,255,0.75);"><span style="width:10px;height:10px;border-radius:50%;background:#ec4899;display:inline-block;flex-shrink:0;"></span>1v1 Situations</span>
-                        <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;color:rgba(255,255,255,0.75);"><span style="width:10px;height:10px;border-radius:50%;background:#14b8a6;display:inline-block;flex-shrink:0;"></span>Communication</span>
+                    <!-- Custom skill legend — click to toggle individual skills on/off -->
+                    <div id="trendsLegend" style="display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 10px 0 6px; padding: 0 2px;">
+                        <button class="legend-pill" data-skill="Distribution"     style="--pill-color:#3b82f6;">Distribution</button>
+                        <button class="legend-pill" data-skill="Shot Stopping"    style="--pill-color:#ef4444;">Shot Stopping</button>
+                        <button class="legend-pill" data-skill="Positioning"      style="--pill-color:#f59e0b;">Positioning</button>
+                        <button class="legend-pill" data-skill="Cross Management" style="--pill-color:#8b5cf6;">Cross Management</button>
+                        <button class="legend-pill" data-skill="1v1 Situations"   style="--pill-color:#ec4899;">1v1 Situations</button>
+                        <button class="legend-pill" data-skill="Communication"    style="--pill-color:#14b8a6;">Communication</button>
                     </div>
                     <div class="chart-container" style="position: relative; height: 280px; width: 100%; margin-top: 4px;">
                         <canvas id="trendsChart"></canvas>

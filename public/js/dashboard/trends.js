@@ -20,15 +20,30 @@ export function initTrendsChart() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // Attach listeners to pill buttons
+    // Attach listeners to time range pill buttons
     document.querySelectorAll('.time-range-pills .pill-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.time-range-pills .pill-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             currentRange = e.target.getAttribute('data-range');
-            
-            // Re-render chart with cached sessions
             renderChart(window.lastSessionsForChart || []);
+        });
+    });
+
+    // Attach listeners to legend toggle pills
+    document.querySelectorAll('#trendsLegend .legend-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const skill = btn.getAttribute('data-skill');
+            const datasetIndex = RADAR_SKILL_ORDER.indexOf(skill);
+            if (datasetIndex === -1 || !chartInstance) return;
+
+            const dataset = chartInstance.data.datasets[datasetIndex];
+            dataset.hidden = !dataset.hidden;
+
+            // Visual: dim the pill when hidden
+            btn.classList.toggle('legend-pill--hidden', dataset.hidden);
+
+            chartInstance.update();
         });
     });
 

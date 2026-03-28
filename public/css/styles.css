@@ -1271,6 +1271,49 @@ body.admin-bg {
     min-height: 250px;
 }
 
+/* ── Trends Chart Legend Pills ───────────────────────────── */
+.legend-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 8px;
+    border-radius: 100px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.82);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.18s, border-color 0.18s, background 0.18s;
+    white-space: nowrap;
+}
+.legend-pill::before {
+    content: '';
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--pill-color, #fff);
+    flex-shrink: 0;
+    box-shadow: 0 0 5px var(--pill-color, transparent);
+}
+.legend-pill:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.22);
+}
+/* Hidden/toggled-off state */
+.legend-pill--hidden {
+    opacity: 0.38;
+    text-decoration: line-through;
+    border-color: rgba(255,255,255,0.06);
+    background: transparent;
+}
+.legend-pill--hidden::before {
+    opacity: 0.3;
+    box-shadow: none;
+}
+
+
 /* ═══════════════════════════════════════════════════════════
  * DASHBOARD V2 — Mobile-first redesign
  * ═══════════════════════════════════════════════════════════ */
