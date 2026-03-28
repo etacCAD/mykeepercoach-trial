@@ -731,16 +731,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Group files by Local Date String
+        // Group files by Time Window (3 hours max per game)
         batchFilesGrouped = {};
         batchTotalFiles = files.length;
         
+        // Sort files chronologically
+        files.sort((a, b) => a.lastModified - b.lastModified);
+
+        let currentGroupKey = null;
+        let currentGroupStartTime = null;
+
         files.forEach(f => {
-            const modDate = new Date(f.lastModified);
-            // Format: Math Date (e.g. "Jan 1, 2026")
-            const dateStr = modDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            if (!batchFilesGrouped[dateStr]) batchFilesGrouped[dateStr] = [];
-            batchFilesGrouped[dateStr].push(f);
+            // If we don't have a group started, OR the file falls > 3 hours (10800000 ms) after the current group's first file
+            if (!currentGroupStartTime || (f.lastModified - currentGroupStartTime) > 3 * 60 * 60 * 1000) {
+                currentGroupStartTime = f.lastModified;
+                const startDate = new Date(currentGroupStartTime);
+                
+                // Format e.g., "Jan 1, 2026 - 10:30 AM"
+                const datePart = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const timePart = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                
+                currentGroupKey = `${datePart} (${timePart})`;
+                batchFilesGrouped[currentGroupKey] = [];
+            }
+            batchFilesGrouped[currentGroupKey].push(f);
         });
 
         // Render summary
