@@ -246,6 +246,41 @@
             border-radius: 20px;
         }
 
+        /* ── Batch Upload Modal ───────────────────────── */
+        .batch-summary {
+            margin-top: 1rem;
+            max-height: 250px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 0.75rem;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .batch-group {
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .batch-group:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .batch-group-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+        }
+        .batch-file-item {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.15rem 0;
+        }
+
         /* Scrollbar styling */
         .log-feed::-webkit-scrollbar, .report-list::-webkit-scrollbar, .report-detail-panel::-webkit-scrollbar {
             width: 4px;
@@ -552,6 +587,48 @@
             <div class="modal-footer">
                 <button class="btn outline-btn" id="cancelDeleteBtn">Cancel</button>
                 <button class="btn" id="confirmDeleteBtn" style="background:var(--danger,#e53e3e);color:#fff;">Delete Player</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Upload Modal -->
+    <div class="modal-overlay" id="batchModal" style="display:none;">
+        <div class="modal glassmorphism" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Batch Load Games</h3>
+                <button class="modal-close" id="closeBatchModal">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="batchUid">
+                <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem;">
+                    Loading games for: <strong id="batchPlayerName" style="color:var(--text-primary);"></strong><br/>
+                    Select multiple video files. They will be automatically grouped into separate matches based on their date/time of creation. The "Opponent" flag for each match will be set to the generated date (e.g. 'Jan 1 2026').
+                </p>
+
+                <div class="input-group">
+                    <label>Select Video Files</label>
+                    <input type="file" id="batchFileInput" multiple accept="video/*" style="width:100%; padding:0.5rem; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:var(--text-primary); cursor:pointer;">
+                </div>
+
+                <div id="batchSummaryContainer" style="display:none;">
+                    <div class="batch-summary" id="batchSummaryList">
+                        <!-- Grouped files injected here -->
+                    </div>
+                </div>
+
+                <div id="batchProgressContainer" style="display:none; margin-top:1.5rem;">
+                    <p id="batchProgressText" style="font-size:0.85rem; color:var(--text-primary); margin-bottom:0.4rem;">Uploading games...</p>
+                    <div class="progress-bar-bg" style="height:6px;">
+                        <div class="progress-bar-fill" id="batchProgressFill" style="width:0%; height:6px; transition:width 0.3s; background:var(--accent);"></div>
+                    </div>
+                </div>
+
+                <p id="batchStatusMsg" class="status-msg" style="margin-top:1rem;"></p>
+                <p id="batchErrorMsg" class="error-msg" style="margin-top:1rem;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn outline-btn" id="cancelBatchBtn">Close</button>
+                <button class="btn primary-btn" id="confirmBatchBtn" disabled>Upload & Create Matches</button>
             </div>
         </div>
     </div>

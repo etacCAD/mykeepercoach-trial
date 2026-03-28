@@ -1,7 +1,8 @@
 import { initFirebase } from "./firebase-config.js";
 import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { collection, getDocs, query, orderBy, doc, setDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, getDocs, query, orderBy, doc, setDoc, serverTimestamp, getDoc, addDoc, updateDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 const PROTECTED_EMAIL = 'evan@tacanni.com';
 
@@ -13,7 +14,7 @@ let allTedConversations = []; // flat list of chatbot interactions
 
 // ── Tab System ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-    const { auth, db } = await initFirebase();
+    const { auth, db, storage } = await initFirebase();
     functions = getFunctions();
 
     // Auth Guard
@@ -187,7 +188,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="player-email">${player.email || ''}</span>
                         ${trialBadge}
                     </div>
-                    <div class="roster-actions">
                         <button class="btn sm-btn outline-btn edit-player-btn"
                             data-uid="${player.uid}"
                             data-name="${name}"
@@ -195,11 +195,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                             data-agegroup="${player.ageGroup || ''}">
                             ✎ Edit
                         </button>
+                        <button class="btn sm-btn outline-btn btn-batch-load"
+                            data-uid="${player.uid}"
+                            data-name="${name}">
+                            ⇪ Batch Load
+                        </button>
                         ${isProtected ? '' : `<button class="btn sm-btn" style="background:var(--danger,#e53e3e);color:#fff;"
                             onclick="this.dispatchEvent(new CustomEvent('open-delete', {bubbles:true, detail:{uid:'${player.uid}', label:'${name} (${player.email || ''})'}}))" >
                             🗑 Delete
                         </button>`}
-                        <a href="/dashboard?uid=${player.uid}" class="btn sm-btn primary-btn view-dash-btn">View →</a>
+                        <a href="/dashboard?uid=${player.uid}" class="btn sm-btn primary-btn view-dash-btn" target="_blank">View →</a>
                     </div>
                 `;
                 rosterList.appendChild(item);
@@ -208,6 +213,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Wire edit buttons
             document.querySelectorAll('.edit-player-btn').forEach(btn => {
                 btn.addEventListener('click', () => openEditModal(btn.dataset));
+            });
+            document.querySelectorAll('.btn-batch-load').forEach(btn => {
+                btn.addEventListener('click', () => openBatchModal(btn.dataset.uid, btn.dataset.name));
             });
 
             // Wire delete via custom event
@@ -683,6 +691,184 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusEl.style.display = 'block';
             deleteBtn.disabled = false;
             deleteBtn.textContent = 'Delete Player';
+        }
+    });
+
+    // ── Batch Load Modal ────────────────────────────────────
+    let batchFilesGrouped = {};
+    let batchTotalFiles = 0;
+    
+    function openBatchModal(uid, name) {
+        document.getElementById('batchUid').value = uid;
+        document.getElementById('batchPlayerName').textContent = name;
+        document.getElementById('batchFileInput').value = '';
+        document.getElementById('batchSummaryContainer').style.display = 'none';
+        document.getElementById('batchProgressContainer').style.display = 'none';
+        document.getElementById('batchStatusMsg').style.display = 'none';
+        document.getElementById('batchErrorMsg').style.display = 'none';
+        document.getElementById('confirmBatchBtn').disabled = true;
+        document.getElementById('confirmBatchBtn').textContent = 'Upload & Create Matches';
+        document.getElementById('cancelBatchBtn').disabled = false;
+        document.getElementById('batchModal').style.display = 'flex';
+        batchFilesGrouped = {};
+        batchTotalFiles = 0;
+    }
+
+    function closeBatchModal() {
+        if (document.getElementById('confirmBatchBtn').disabled && document.getElementById('confirmBatchBtn').textContent === 'Uploading...') return;
+        document.getElementById('batchModal').style.display = 'none';
+    }
+
+    document.getElementById('closeBatchModal').addEventListener('click', closeBatchModal);
+    document.getElementById('cancelBatchBtn').addEventListener('click', closeBatchModal);
+    
+    document.getElementById('batchFileInput').addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) {
+            document.getElementById('batchSummaryContainer').style.display = 'none';
+            document.getElementById('confirmBatchBtn').disabled = true;
+            return;
+        }
+
+        // Group files by Local Date String
+        batchFilesGrouped = {};
+        batchTotalFiles = files.length;
+        
+        files.forEach(f => {
+            const modDate = new Date(f.lastModified);
+            // Format: Math Date (e.g. "Jan 1, 2026")
+            const dateStr = modDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            if (!batchFilesGrouped[dateStr]) batchFilesGrouped[dateStr] = [];
+            batchFilesGrouped[dateStr].push(f);
+        });
+
+        // Render summary
+        const summaryHtml = Object.keys(batchFilesGrouped).map(dateStr => {
+            const groupFiles = batchFilesGrouped[dateStr];
+            return `
+            <div class="batch-group">
+                <div class="batch-group-title">Match Date: ${dateStr} (${groupFiles.length} video${groupFiles.length > 1 ? 's' : ''})</div>
+                ${groupFiles.map(f => `
+                    <div class="batch-file-item">
+                        <span>${f.name}</span>
+                        <span>${(f.size / (1024*1024)).toFixed(1)} MB</span>
+                    </div>
+                `).join('')}
+            </div>`;
+        }).join('');
+
+        document.getElementById('batchSummaryList').innerHTML = summaryHtml;
+        document.getElementById('batchSummaryContainer').style.display = 'block';
+        document.getElementById('confirmBatchBtn').disabled = false;
+    });
+
+    document.getElementById('confirmBatchBtn').addEventListener('click', async () => {
+        const uid = document.getElementById('batchUid').value;
+        const btn = document.getElementById('confirmBatchBtn');
+        const cancelBtn = document.getElementById('cancelBatchBtn');
+        const progressContainer = document.getElementById('batchProgressContainer');
+        const progressFill = document.getElementById('batchProgressFill');
+        const progressText = document.getElementById('batchProgressText');
+        const errorMsg = document.getElementById('batchErrorMsg');
+        const statusMsg = document.getElementById('batchStatusMsg');
+
+        btn.disabled = true;
+        cancelBtn.disabled = true;
+        btn.textContent = 'Uploading...';
+        progressContainer.style.display = 'block';
+        errorMsg.style.display = 'none';
+        statusMsg.style.display = 'none';
+
+        let filesUploaded = 0;
+        
+        try {
+            const groups = Object.keys(batchFilesGrouped);
+            
+            for (const dateStr of groups) {
+                const files = batchFilesGrouped[dateStr];
+                
+                // Earliest file timestamp in the group for 'createdAt'
+                const earliestMs = Math.min(...files.map(f => f.lastModified));
+                const earliestDate = new Date(earliestMs);
+                
+                // Formatted YYYY-MM-DD for gameDate
+                const yyyy = earliestDate.getFullYear();
+                const mm = String(earliestDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(earliestDate.getDate()).padStart(2, '0');
+                const gameDate = `${yyyy}-${mm}-${dd}`;
+                
+                progressText.textContent = `Creating session for ${dateStr}...`;
+                
+                // Create pending session
+                const sessionRef = await addDoc(collection(db, 'users', uid, 'sessions'), {
+                    label: `${dateStr} · Historical Game vs. ${dateStr}`,
+                    myTeam: `Historical Game`,
+                    opponent: dateStr,
+                    gameDate: gameDate,
+                    goalieNumber: null,
+                    jerseyColor: null,
+                    videos: files.map((f, i) => ({ 
+                        storagePath: `videos/${uid}/${earliestMs}_${i}_${f.name}`, 
+                        name: f.name 
+                    })),
+                    status: 'pending',
+                    createdAt: Timestamp.fromDate(earliestDate),
+                    uploadedAt: null,
+                });
+
+                // Upload files concurrently for THIS session
+                const uploadedVideos = [];
+                const uploadPromises = files.map(async (file, i) => {
+                    const ext = file.name.split('.').pop()?.toLowerCase();
+                    const mimeType = ext === 'mov' ? 'video/quicktime' : ext === 'avi' ? 'video/x-msvideo' : ext === 'webm' ? 'video/webm' : 'video/mp4';
+                    const storagePath = `videos/${uid}/${earliestMs}_${i}_${file.name}`;
+                    
+                    const storageRefObj = ref(storage, storagePath);
+                    const task = uploadBytesResumable(storageRefObj, file, { contentType: mimeType });
+                    
+                    return new Promise((resolve, reject) => {
+                        task.on('state_changed', 
+                            () => {}, 
+                            (err) => reject(err), 
+                            async () => {
+                                const url = await getDownloadURL(task.snapshot.ref);
+                                filesUploaded++;
+                                const totalPct = Math.round((filesUploaded / batchTotalFiles) * 100);
+                                progressFill.style.width = `${totalPct}%`;
+                                progressText.textContent = `Uploaded ${filesUploaded} of ${batchTotalFiles} files...`;
+                                resolve({ url, storagePath, name: file.name, mimeType, actionSegments: null });
+                            }
+                        );
+                    });
+                });
+
+                const results = await Promise.all(uploadPromises);
+                
+                // Update session
+                await updateDoc(sessionRef, {
+                    videos: results,
+                    videoURL: results[0].url,
+                    uploadedAt: serverTimestamp() // The actual upload time
+                });
+            }
+
+            statusMsg.textContent = "✓ Batch upload complete!";
+            statusMsg.style.color = "var(--accent)";
+            statusMsg.style.display = "block";
+            btn.textContent = "Finished";
+            cancelBtn.textContent = "Return";
+            cancelBtn.disabled = false;
+            
+            // Reload logs/UI
+            await loadAll(db);
+            
+        } catch (err) {
+            console.error("Batch upload failed:", err);
+            errorMsg.textContent = "Error: " + (err.message || err);
+            errorMsg.style.display = "block";
+            btn.disabled = false;
+            cancelBtn.disabled = false;
+            btn.textContent = "Retry Failed";
         }
     });
 
