@@ -10,7 +10,9 @@ export const analyzeV2 = onRequest(
   {
     secrets: ["GEMINI_API_KEY"],
     timeoutSeconds: 540,
-    memory: "1GiB",
+    memory: "2GiB",
+    concurrency: 1,
+    invoker: "public",
     cors: [
       "https://goalie-coach-dev-11a17.web.app",
       "https://goalie-coach-dev-11a17.firebaseapp.com",

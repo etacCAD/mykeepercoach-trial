@@ -198,3 +198,18 @@ Run this audit monthly:
 - [ ] Trial conversion: Are users hitting the paywall before or after the value moment?
 - [ ] Referral: Are share prompts appearing at the right trigger moments?
 - [ ] Reviews: Are we prompting for App Store reviews at the right time (after milestone unlock)?
+
+
+### 🔴 CRITICAL PROJECT RULE
+**NEVER touch or impact our ability to upload and process videos without getting the human's explicit approval first.**
+
+If you propose ANY changes to the upload pipeline, frontend file handlers, or backend Gemini video processing architecture, you MUST:
+1. Clearly outline the technical risks involved.
+2. Provide a safe mitigation plan.
+3. WAIT for the human to explicitly say "approved" before modifying the code.
+
+
+### 🔴 CRITICAL PROJECT RULE: AI MODEL SELECTION
+**ALWAYS use Gemini 2.5 Flash and the `@google/genai` SDK for all backend/AI architecture.**
+The older Gemini 1.5 and `@google-cloud/vertexai` SDK are DEPRECATED and currently throw 404 errors. Never write code proposing Vertex AI.
+

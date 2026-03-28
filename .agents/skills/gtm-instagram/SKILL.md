@@ -216,3 +216,18 @@ Would you be open to a free pro account in exchange for an honest post or story 
 | Friday | App feature demo (Stories) | Earn |
 | Saturday | Community post (share a keeper success story) | Engage |
 | Sunday | Motivational quote + week teaser (Stories) | Inspire |
+
+
+### 🔴 CRITICAL PROJECT RULE
+**NEVER touch or impact our ability to upload and process videos without getting the human's explicit approval first.**
+
+If you propose ANY changes to the upload pipeline, frontend file handlers, or backend Gemini video processing architecture, you MUST:
+1. Clearly outline the technical risks involved.
+2. Provide a safe mitigation plan.
+3. WAIT for the human to explicitly say "approved" before modifying the code.
+
+
+### 🔴 CRITICAL PROJECT RULE: AI MODEL SELECTION
+**ALWAYS use Gemini 2.5 Flash and the `@google/genai` SDK for all backend/AI architecture.**
+The older Gemini 1.5 and `@google-cloud/vertexai` SDK are DEPRECATED and currently throw 404 errors. Never write code proposing Vertex AI.
+

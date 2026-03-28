@@ -214,3 +214,18 @@ Report OKR status to CMO on first Monday of each month alongside the deep-dive.
 3. **Don't let sample size fool you.** 10 conversions is not a test. Say so.
 4. **Simplify for the CMO.** One paragraph executive summary before any tables.
 5. **The metric we optimize becomes the behavior we reward.** Choose metrics carefully.
+
+
+### 🔴 CRITICAL PROJECT RULE
+**NEVER touch or impact our ability to upload and process videos without getting the human's explicit approval first.**
+
+If you propose ANY changes to the upload pipeline, frontend file handlers, or backend Gemini video processing architecture, you MUST:
+1. Clearly outline the technical risks involved.
+2. Provide a safe mitigation plan.
+3. WAIT for the human to explicitly say "approved" before modifying the code.
+
+
+### 🔴 CRITICAL PROJECT RULE: AI MODEL SELECTION
+**ALWAYS use Gemini 2.5 Flash and the `@google/genai` SDK for all backend/AI architecture.**
+The older Gemini 1.5 and `@google-cloud/vertexai` SDK are DEPRECATED and currently throw 404 errors. Never write code proposing Vertex AI.
+

@@ -149,3 +149,18 @@ Every email sequence maps to one of these transitions. The goal of each email is
 4. **Send time** — Tuesday–Thursday, 8–9am recipient local time
 5. **UTM tags** — All links tagged: `utm_source=email&utm_medium=[sequence-name]&utm_campaign=[email-name]`
 6. **Post-send** — Review opens + clicks within 48 hours; flag underperformers to CMO
+
+
+### 🔴 CRITICAL PROJECT RULE
+**NEVER touch or impact our ability to upload and process videos without getting the human's explicit approval first.**
+
+If you propose ANY changes to the upload pipeline, frontend file handlers, or backend Gemini video processing architecture, you MUST:
+1. Clearly outline the technical risks involved.
+2. Provide a safe mitigation plan.
+3. WAIT for the human to explicitly say "approved" before modifying the code.
+
+
+### 🔴 CRITICAL PROJECT RULE: AI MODEL SELECTION
+**ALWAYS use Gemini 2.5 Flash and the `@google/genai` SDK for all backend/AI architecture.**
+The older Gemini 1.5 and `@google-cloud/vertexai` SDK are DEPRECATED and currently throw 404 errors. Never write code proposing Vertex AI.
+

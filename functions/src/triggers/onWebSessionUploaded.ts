@@ -7,7 +7,7 @@ import * as admin from "firebase-admin";
  * and writes the structured analysis back to the session doc.
  */
 export const onWebSessionUploaded = onObjectFinalized(
-  { timeoutSeconds: 540, secrets: ["GEMINI_API_KEY"] },
+  { timeoutSeconds: 540, secrets: ["GEMINI_API_KEY"], memory: "2GiB", concurrency: 1 },
   async (event) => {
     const filePath = event.data.name;
     if (!filePath) return;

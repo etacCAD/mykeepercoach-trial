@@ -235,7 +235,7 @@ export function openAnalysisModal(session) {
             </div>`;
         }).join('');
         
-        const highlightsSection = highlightsHtml ? `<div class="highlights-section" style="margin-top:24px;"><h4>🎬 Coachable Moments</h4><div class="highlights-list">${highlightsHtml}</div></div>` : '';
+        const highlightsSection = highlightsHtml ? `<div class="highlights-section" style="margin-top:24px;"><h4 style="display:flex; align-items:center; gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg> Coachable Moments</h4><div class="highlights-list">${highlightsHtml}</div></div>` : '';
 
         const videoUrl = session.videos && session.videos.length > 0 ? session.videos[0].url : null;
         const videoContainer = document.getElementById('highlightVideoContainer');

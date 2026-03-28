@@ -180,18 +180,28 @@ h2 {
     text-align: center;
 }
 
-.feature-icon {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 20px;
+.feature-icon-wrap {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 24px;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: rgba(0, 230, 118, 0.07);
+    border: 1px solid rgba(0, 230, 118, 0.25);
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(0, 230, 118, 0.12), inset 0 0 12px rgba(0, 230, 118, 0.05);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
-.feature-icon svg {
-    width: 72px;
-    height: 72px;
+.feature-card:hover .feature-icon-wrap {
+    box-shadow: 0 0 36px rgba(0, 230, 118, 0.28), inset 0 0 16px rgba(0, 230, 118, 0.1);
+    transform: scale(1.06);
+}
+
+.feature-icon-wrap svg {
+    width: 56px;
+    height: 56px;
 }
 
 .feature-card h3 {

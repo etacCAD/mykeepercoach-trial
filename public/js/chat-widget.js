@@ -118,9 +118,9 @@ class ChatWidget {
 
     addMessage(text, sender) {
         const msgDiv = document.createElement('div');
-        msgDiv.className = `chat-message ${sender}`;
+        msgDiv.className = \`chat-message \${sender}\`;
 
-        const formattedText = text.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" style="color: inherit; text-decoration: underline;">$1</a>');
+        const formattedText = text.replace(/\\[(.*?)\\]\\((.*?)\\)/g, '<a href="$2" target="_blank" style="color: inherit; text-decoration: underline;">$1</a>');
         msgDiv.innerHTML = formattedText;
 
         this.messagesContainer.appendChild(msgDiv);
@@ -136,13 +136,13 @@ class ChatWidget {
         const indicator = document.createElement('div');
         indicator.className = 'chat-message bot typing';
         indicator.id = 'tedTypingIndicator';
-        indicator.innerHTML = `
+        indicator.innerHTML = \`
             <div class="chat-typing-indicator">
                 <div class="chat-typing-dot"></div>
                 <div class="chat-typing-dot"></div>
                 <div class="chat-typing-dot"></div>
             </div>
-        `;
+        \`;
         this.messagesContainer.appendChild(indicator);
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
         this.isWaitingForBot = true;

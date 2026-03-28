@@ -191,3 +191,18 @@ Always add chapter markers (timestamps in description). Improves:
 | "Report Card Reveal" | → Blog post companion → Email teaser with link |
 | "Coaching Conversations" interview | → Instagram quote carousel (5 best quotes) → PR pitch ("Expert coaches are talking about...") |
 | Top performing video | → Embed in trial.html page as social proof |
+
+
+### 🔴 CRITICAL PROJECT RULE
+**NEVER touch or impact our ability to upload and process videos without getting the human's explicit approval first.**
+
+If you propose ANY changes to the upload pipeline, frontend file handlers, or backend Gemini video processing architecture, you MUST:
+1. Clearly outline the technical risks involved.
+2. Provide a safe mitigation plan.
+3. WAIT for the human to explicitly say "approved" before modifying the code.
+
+
+### 🔴 CRITICAL PROJECT RULE: AI MODEL SELECTION
+**ALWAYS use Gemini 2.5 Flash and the `@google/genai` SDK for all backend/AI architecture.**
+The older Gemini 1.5 and `@google-cloud/vertexai` SDK are DEPRECATED and currently throw 404 errors. Never write code proposing Vertex AI.
+

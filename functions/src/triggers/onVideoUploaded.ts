@@ -8,7 +8,7 @@ const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const VALID_CONTENT_TYPES = ["video/mp4", "video/quicktime"];
 
 export const onVideoUploaded = onObjectFinalized(
-  { timeoutSeconds: 540, secrets: ["GEMINI_API_KEY"] },
+  { timeoutSeconds: 540, secrets: ["GEMINI_API_KEY"], memory: "1GiB" },
   async (event) => {
     const filePath = event.data.name;
     const contentType = event.data.contentType;

@@ -67,28 +67,27 @@
         <div class="container feature-grid">
             <!-- Feature 1 -->
             <div class="feature-card glassmorphism">
-                <div class="feature-icon">
-                    <!-- Icon: Goalkeeper glove (palm facing out, simplified) -->
+                <div class="feature-icon-wrap">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                        <!-- Palm base -->
-                        <rect x="14" y="34" width="24" height="20" rx="5" fill="rgba(0,230,118,0.18)" stroke="#00E676" stroke-width="2.5"/>
-                        <!-- Thumb -->
-                        <rect x="6" y="36" width="10" height="14" rx="5" fill="rgba(0,230,118,0.18)" stroke="#00E676" stroke-width="2.5"/>
-                        <!-- Finger 1 -->
-                        <rect x="14" y="20" width="6" height="18" rx="3" fill="rgba(0,230,118,0.18)" stroke="#00E676" stroke-width="2.5"/>
-                        <!-- Finger 2 -->
-                        <rect x="22" y="16" width="6" height="22" rx="3" fill="rgba(0,230,118,0.18)" stroke="#00E676" stroke-width="2.5"/>
-                        <!-- Finger 3 -->
-                        <rect x="30" y="18" width="6" height="20" rx="3" fill="rgba(0,230,118,0.18)" stroke="#00E676" stroke-width="2.5"/>
-                        <!-- Stats lines to the right -->
-                        <line x1="42" y1="20" x2="58" y2="20" stroke="#00E676" stroke-width="2" stroke-opacity="0.9"/>
-                        <line x1="42" y1="30" x2="54" y2="30" stroke="#00E676" stroke-width="2" stroke-opacity="0.6"/>
-                        <line x1="42" y1="40" x2="56" y2="40" stroke="#00E676" stroke-width="2" stroke-opacity="0.8"/>
-                        <line x1="42" y1="50" x2="50" y2="50" stroke="#00E676" stroke-width="2" stroke-opacity="0.5"/>
-                        <circle cx="42" cy="20" r="2" fill="#00E676"/>
-                        <circle cx="42" cy="30" r="2" fill="#00E676"/>
-                        <circle cx="42" cy="40" r="2" fill="#00E676"/>
-                        <circle cx="42" cy="50" r="2" fill="#00E676"/>
+                        <!-- Radar chart: outer hexagon -->
+                        <polygon points="32,6 55,19 55,45 32,58 9,45 9,19" fill="rgba(0,230,118,0.06)" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.4"/>
+                        <!-- Mid ring -->
+                        <polygon points="32,16 46,24 46,40 32,48 18,40 18,24" fill="rgba(0,230,118,0.05)" stroke="#00E676" stroke-width="1" stroke-opacity="0.3"/>
+                        <!-- Inner ring -->
+                        <polygon points="32,24 40,29 40,35 32,40 24,35 24,29" fill="rgba(0,230,118,0.08)" stroke="#00E676" stroke-width="1" stroke-opacity="0.3"/>
+                        <!-- Axis spokes -->
+                        <line x1="32" y1="6" x2="32" y2="58" stroke="#00E676" stroke-width="0.75" stroke-opacity="0.2"/>
+                        <line x1="9" y1="19" x2="55" y2="45" stroke="#00E676" stroke-width="0.75" stroke-opacity="0.2"/>
+                        <line x1="55" y1="19" x2="9" y2="45" stroke="#00E676" stroke-width="0.75" stroke-opacity="0.2"/>
+                        <!-- Data fill polygon (slightly off-center to look "real") -->
+                        <polygon points="32,12 50,25 48,43 32,52 14,41 16,22" fill="rgba(0,230,118,0.22)" stroke="#00E676" stroke-width="2"/>
+                        <!-- Data vertices (dots) -->
+                        <circle cx="32" cy="12" r="2.5" fill="#00E676"/>
+                        <circle cx="50" cy="25" r="2.5" fill="#00E676"/>
+                        <circle cx="48" cy="43" r="2.5" fill="#00E676"/>
+                        <circle cx="32" cy="52" r="2.5" fill="#00E676"/>
+                        <circle cx="14" cy="41" r="2.5" fill="#00E676"/>
+                        <circle cx="16" cy="22" r="2.5" fill="#00E676"/>
                     </svg>
                 </div>
                 <h3>See Exactly Where You Stand</h3>
@@ -96,24 +95,27 @@
             </div>
             <!-- Feature 2 -->
             <div class="feature-card glassmorphism">
-                <div class="feature-icon">
-                    <!-- Icon: Soccer ball + AI scan beams -->
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#00E676" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <!-- Ball -->
-                        <circle cx="28" cy="34" r="18" fill="rgba(0,230,118,0.1)" stroke="#00E676"/>
-                        <!-- Pentagon pattern on ball -->
-                        <polygon points="28,22 34,28 32,36 24,36 22,28" fill="rgba(0,230,118,0.3)" stroke="#00E676" stroke-width="1.5"/>
-                        <line x1="28" y1="22" x2="28" y2="16" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.5"/>
-                        <line x1="34" y1="28" x2="41" y2="25" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.5"/>
-                        <line x1="32" y1="36" x2="37" y2="42" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.5"/>
-                        <line x1="24" y1="36" x2="19" y2="42" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.5"/>
-                        <line x1="22" y1="28" x2="15" y2="25" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.5"/>
-                        <!-- AI scan lines -->
-                        <line x1="48" y1="14" x2="56" y2="8" stroke="#00E676" stroke-width="2" stroke-opacity="0.8"/>
-                        <line x1="50" y1="18" x2="60" y2="16" stroke="#00E676" stroke-width="2" stroke-opacity="0.5"/>
-                        <line x1="50" y1="24" x2="60" y2="26" stroke="#00E676" stroke-width="2" stroke-opacity="0.6"/>
-                        <circle cx="46" cy="16" r="4" fill="rgba(0,230,118,0.3)" stroke="#00E676" stroke-width="2"/>
-                        <line x1="43" y1="19" x2="40" y2="24" stroke="#00E676" stroke-width="1.5"/>
+                <div class="feature-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- Video/film frame -->
+                        <rect x="6" y="14" width="40" height="30" rx="4" fill="rgba(0,230,118,0.1)" stroke="#00E676" stroke-width="2"/>
+                        <!-- Film perforations left -->
+                        <rect x="8" y="17" width="4" height="5" rx="1" fill="rgba(0,230,118,0.35)" stroke="#00E676" stroke-width="1"/>
+                        <rect x="8" y="26" width="4" height="5" rx="1" fill="rgba(0,230,118,0.35)" stroke="#00E676" stroke-width="1"/>
+                        <rect x="8" y="35" width="4" height="5" rx="1" fill="rgba(0,230,118,0.35)" stroke="#00E676" stroke-width="1"/>
+                        <!-- Film perforations right -->
+                        <rect x="40" y="17" width="4" height="5" rx="1" fill="rgba(0,230,118,0.35)" stroke="#00E676" stroke-width="1"/>
+                        <rect x="40" y="26" width="4" height="5" rx="1" fill="rgba(0,230,118,0.35)" stroke="#00E676" stroke-width="1"/>
+                        <rect x="40" y="35" width="4" height="5" rx="1" fill="rgba(0,230,118,0.35)" stroke="#00E676" stroke-width="1"/>
+                        <!-- Play arrow inside frame -->
+                        <polygon points="22,22 22,36 34,29" fill="rgba(0,230,118,0.5)" stroke="#00E676" stroke-width="1.5" stroke-linejoin="round"/>
+                        <!-- AI spark / lightning bolt top-right -->
+                        <polygon points="54,6 50,20 56,20 52,34 58,18 52,18" fill="rgba(0,230,118,0.9)" stroke="none"/>
+                        <!-- Connector line -->
+                        <line x1="46" y1="18" x2="50" y2="18" stroke="#00E676" stroke-width="1.5" stroke-opacity="0.6" stroke-dasharray="2 2"/>
+                        <!-- Report lines below frame -->
+                        <line x1="6" y1="50" x2="30" y2="50" stroke="#00E676" stroke-width="2" stroke-opacity="0.8"/>
+                        <line x1="6" y1="56" x2="22" y2="56" stroke="#00E676" stroke-width="2" stroke-opacity="0.5"/>
                     </svg>
                 </div>
                 <h3>AI Match Reports — Yours Overnight</h3>
@@ -121,25 +123,28 @@
             </div>
             <!-- Feature 3 -->
             <div class="feature-card glassmorphism">
-                <div class="feature-icon">
-                    <!-- Icon: Goal post with progression staircase -->
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#00E676" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <div class="feature-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
                         <!-- Goal frame -->
-                        <line x1="6" y1="12" x2="6" y2="52" stroke="#00E676" stroke-width="3"/>
-                        <line x1="58" y1="12" x2="58" y2="52" stroke="#00E676" stroke-width="3"/>
-                        <line x1="6" y1="12" x2="58" y2="12" stroke="#00E676" stroke-width="3"/>
-                        <!-- Net lines vertical -->
-                        <line x1="18" y1="12" x2="18" y2="52" stroke="#00E676" stroke-width="1" stroke-opacity="0.35"/>
-                        <line x1="30" y1="12" x2="30" y2="52" stroke="#00E676" stroke-width="1" stroke-opacity="0.35"/>
-                        <line x1="42" y1="12" x2="42" y2="52" stroke="#00E676" stroke-width="1" stroke-opacity="0.35"/>
-                        <!-- Net lines horizontal -->
-                        <line x1="6" y1="24" x2="58" y2="24" stroke="#00E676" stroke-width="1" stroke-opacity="0.35"/>
-                        <line x1="6" y1="36" x2="58" y2="36" stroke="#00E676" stroke-width="1" stroke-opacity="0.35"/>
-                        <!-- Progression staircase inside goal -->
-                        <rect x="10" y="44" width="8" height="8" rx="1" fill="rgba(0,230,118,0.25)" stroke="#00E676" stroke-width="1.5"/>
-                        <rect x="22" y="38" width="8" height="14" rx="1" fill="rgba(0,230,118,0.35)" stroke="#00E676" stroke-width="1.5"/>
-                        <rect x="34" y="30" width="8" height="22" rx="1" fill="rgba(0,230,118,0.5)" stroke="#00E676" stroke-width="1.5"/>
-                        <rect x="46" y="20" width="8" height="32" rx="1" fill="rgba(0,230,118,0.7)" stroke="#00E676" stroke-width="1.5"/>
+                        <line x1="4" y1="10" x2="4" y2="54" stroke="#00E676" stroke-width="3" stroke-linecap="round"/>
+                        <line x1="60" y1="10" x2="60" y2="54" stroke="#00E676" stroke-width="3" stroke-linecap="round"/>
+                        <line x1="4" y1="10" x2="60" y2="10" stroke="#00E676" stroke-width="3" stroke-linecap="round"/>
+                        <!-- Net grid -->
+                        <line x1="16" y1="10" x2="16" y2="54" stroke="#00E676" stroke-width="0.75" stroke-opacity="0.25"/>
+                        <line x1="28" y1="10" x2="28" y2="54" stroke="#00E676" stroke-width="0.75" stroke-opacity="0.25"/>
+                        <line x1="40" y1="10" x2="40" y2="54" stroke="#00E676" stroke-width="0.75" stroke-opacity="0.25"/>
+                        <line x1="52" y1="10" x2="52" y2="54" stroke="#00E676" stroke-width="0.75" stroke-opacity="0.25"/>
+                        <line x1="4" y1="22" x2="60" y2="22" stroke="#00E676" stroke-width="0.75" stroke-opacity="0.25"/>
+                        <line x1="4" y1="34" x2="60" y2="34" stroke="#00E676" stroke-width="0.75" stroke-opacity="0.25"/>
+                        <line x1="4" y1="46" x2="60" y2="46" stroke="#00E676" stroke-width="0.75" stroke-opacity="0.25"/>
+                        <!-- Age-level stair bars: U8 → U18 -->
+                        <rect x="7"  y="48" width="9" height="6"  rx="1.5" fill="rgba(0,230,118,0.3)"  stroke="#00E676" stroke-width="1.5"/>
+                        <rect x="19" y="40" width="9" height="14" rx="1.5" fill="rgba(0,230,118,0.4)"  stroke="#00E676" stroke-width="1.5"/>
+                        <rect x="31" y="30" width="9" height="24" rx="1.5" fill="rgba(0,230,118,0.55)" stroke="#00E676" stroke-width="1.5"/>
+                        <rect x="43" y="18" width="9" height="36" rx="1.5" fill="rgba(0,230,118,0.75)" stroke="#00E676" stroke-width="1.5"/>
+                        <!-- Rising arrow overlay -->
+                        <polyline points="11,48 23,40 35,30 47,18" stroke="#00E676" stroke-width="1.75" stroke-opacity="0.9" stroke-dasharray="3 2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="47" cy="18" r="2.5" fill="#00E676"/>
                     </svg>
                 </div>
                 <h3>Built for Where YOU Are — U8 to U18</h3>
@@ -163,7 +168,7 @@
             <h2>The keepers who make it don't wait for someone else to see their potential.</h2>
             <p>They track it. They prove it. They show up with receipts. Be that keeper.</p>
             <a href="/signup.html" class="btn primary-btn large-btn">Start Training — Free</a>
-            <p class="legal-disclaimer">By claiming your trial, you agree to our <a href="/terms.html">Terms of Service</a> and <a href="/privacy.html">Privacy Policy</a>.</p>
+
         </div>
     </section>
 

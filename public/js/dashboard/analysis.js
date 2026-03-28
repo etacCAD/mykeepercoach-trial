@@ -90,18 +90,28 @@ export async function reAnalyze(currentUser, firebase, sessionId, btn) {
 
     activeAnalyses.add(sessionId);
 
+    // When viewing as admin via ?uid=<targetUid>, pass the impersonated UID so
+    // the backend looks up the session under the correct user's collection.
+    // NOTE: currentUser is the synthetic targetUser (uid = impersonated UID), so
+    // we compare against the real Firebase Auth user to detect impersonation.
+    const urlUid = new URLSearchParams(window.location.search).get('uid');
+    // Compare against the real Firebase Auth UID — not the synthetic targetUser (whose uid is already the impersonated UID).
+    const realAuthUid = firebase.auth?.currentUser?.uid;
+    const targetUserId = urlUid && realAuthUid && urlUid !== realAuthUid ? urlUid : undefined;
+
     try {
         const functions = getFunctions(firebase.app);
         const reAnalyzeSession = httpsCallable(functions, 'reAnalyzeSession');
 
-        console.log(`[reAnalyze] Calling reAnalyzeSession for ${sessionId}`);
-        await reAnalyzeSession({ sessionId });
+        console.log(`[reAnalyze] Calling reAnalyzeSession for ${sessionId}`, targetUserId ? `(as ${targetUserId})` : '');
+        await reAnalyzeSession({ sessionId, ...(targetUserId && { targetUserId }) });
         console.log(`[reAnalyze] Session ${sessionId} re-analysis complete`);
     } catch (err) {
         console.error('[reAnalyze] Failed:', err);
         // Try to mark as failed in Firestore so the user can retry
         try {
-            const sessionRef = doc(firebase.db, 'users', currentUser.uid, 'sessions', sessionId);
+            const ownerUid = (new URLSearchParams(window.location.search).get('uid')) || currentUser.uid;
+            const sessionRef = doc(firebase.db, 'users', ownerUid, 'sessions', sessionId);
             await updateDoc(sessionRef, { status: 'failed', errorMessage: err.message || String(err) });
         } catch (_) {}
     } finally {

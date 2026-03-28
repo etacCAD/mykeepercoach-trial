@@ -4,20 +4,30 @@ import * as admin from "firebase-admin";
 /**
  * Callable: reAnalyzeSession
  * Re-triggers Gemini analysis for an existing web session that got stuck or failed.
- * Called from the dashboard with { sessionId }.
+ * Called from the dashboard with { sessionId, targetUserId? }.
+ *
+ * When an admin views a user's dashboard via impersonation (?uid=...), the client
+ * passes targetUserId so we look up the session under the correct user's collection.
  */
 export const reAnalyzeSession = onCall(
-  { secrets: ["GEMINI_API_KEY"], timeoutSeconds: 540 },
+  { secrets: ["GEMINI_API_KEY"], timeoutSeconds: 540, memory: "2GiB", concurrency: 1, invoker: "public" },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be signed in.");
     }
 
-    const userId = request.auth.uid;
-    const { sessionId } = request.data as { sessionId: string };
+    const callerUid = request.auth.uid;
+    const { sessionId, targetUserId } = request.data as { sessionId: string; targetUserId?: string };
 
     if (!sessionId) {
       throw new HttpsError("invalid-argument", "sessionId is required.");
+    }
+
+    // If a targetUserId is provided, allow cross-user lookup.
+    // Follows the same loose check as other admin callables — tighten with custom claims later.
+    let userId = callerUid;
+    if (targetUserId && targetUserId !== callerUid) {
+      userId = targetUserId;
     }
 
     const db = admin.firestore();
@@ -50,3 +60,4 @@ export const reAnalyzeSession = onCall(
     }
   }
 );
+

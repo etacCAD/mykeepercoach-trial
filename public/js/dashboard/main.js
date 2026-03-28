@@ -3,8 +3,8 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
-import { addUploadListeners } from "./upload.js?v=3";
-import { startSessionListener, toggleSelectMode, selectAll, confirmBulkDelete } from "./sessions.js?v=3";
+import { addUploadListeners } from "./upload.js?v=5";
+import { startSessionListener, toggleSelectMode, selectAll, confirmBulkDelete } from "./sessions.js?v=5";
 import { addModalListeners } from "./modals.js";
 import { initTrendsChart, initRadarChart } from "./trends.js";
 
@@ -54,8 +54,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Set display name
         if (isImpersonating) {
-            const nameEl = document.getElementById('playerName');
-            nameEl.innerHTML = `<a href="/admin" title="Back to Admin Portal" style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;">${fullName}<span style="font-size:0.7rem;background:rgba(var(--accent-rgb,99,102,241),0.25);color:var(--accent,#6366f1);border-radius:6px;padding:2px 7px;font-weight:700;letter-spacing:0.05em;">← Admin</span></a>`;
+            document.getElementById('playerName').textContent = fullName;
+            // Insert a clean admin impersonation bar between brand and nav-user
+            const nav = document.querySelector('.top-nav');
+            if (nav && !nav.querySelector('.admin-impersonate-bar')) {
+                const bar = document.createElement('div');
+                bar.className = 'admin-impersonate-bar';
+                bar.innerHTML = `<span class="admin-view-label">Viewing as</span><span class="admin-view-name">${fullName}</span><a href="/admin" class="admin-back-btn">← Admin</a>`;
+                nav.insertBefore(bar, nav.querySelector('.nav-user'));
+            }
         } else {
             document.getElementById('playerName').textContent = fullName;
         }

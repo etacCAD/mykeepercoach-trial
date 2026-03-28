@@ -1,36 +1,38 @@
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
+import * as path from "path";
+import * as os from "os";
 
 const db = admin.firestore();
 
 // ── Gemini response schema ───────────────────────────────────────────────────
 
 const ANALYSIS_SCHEMA = {
-  type: SchemaType.OBJECT,
+  type: "OBJECT",
   properties: {
-    saves: { type: SchemaType.NUMBER, description: "Number of saves made by the goalkeeper" },
-    shotsOnTargetFaced: { type: SchemaType.NUMBER, description: "Total shots on target faced" },
-    goalsConceded: { type: SchemaType.NUMBER, description: "Goals conceded" },
-    unsaveableGoals: { type: SchemaType.NUMBER, description: "Goals that were unsaveable (e.g., deflections, penalties with no chance)" },
-    errorsLeadingToGoal: { type: SchemaType.NUMBER, description: "Goalkeeper errors directly leading to a goal" },
-    crossesFaced: { type: SchemaType.NUMBER, description: "Total crosses into the box faced" },
-    crossesClaimed: { type: SchemaType.NUMBER, description: "Crosses cleanly caught/claimed" },
-    crossesPunched: { type: SchemaType.NUMBER, description: "Crosses punched clear" },
-    crossesMissed: { type: SchemaType.NUMBER, description: "Crosses missed or dropped" },
-    oneVOneFaced: { type: SchemaType.NUMBER, description: "1v1 situations faced" },
-    oneVOneSaved: { type: SchemaType.NUMBER, description: "1v1 situations saved" },
-    distributionAccuracyPercent: { type: SchemaType.NUMBER, description: "Distribution accuracy as a decimal 0.0-1.0" },
-    positioningRating: { type: SchemaType.NUMBER, description: "Positioning quality rating 1-10" },
-    communicationRating: { type: SchemaType.NUMBER, description: "Communication/organization rating 1-10" },
-    composure: { type: SchemaType.NUMBER, description: "Composure under pressure rating 1-10" },
-    overallRating: { type: SchemaType.NUMBER, description: "Overall goalkeeper performance rating 1-10" },
-    strengthNote1: { type: SchemaType.STRING, description: "First key strength observed" },
-    strengthNote2: { type: SchemaType.STRING, description: "Second key strength observed" },
-    strengthNote3: { type: SchemaType.STRING, description: "Third key strength observed" },
-    weaknessNote1: { type: SchemaType.STRING, description: "First area to improve" },
-    weaknessNote2: { type: SchemaType.STRING, description: "Second area to improve" },
-    coachComments: { type: SchemaType.STRING, description: "2-3 sentence coaching summary of the performance" },
+    saves: { type: "NUMBER", description: "Number of saves made by the goalkeeper" },
+    shotsOnTargetFaced: { type: "NUMBER", description: "Total shots on target faced" },
+    goalsConceded: { type: "NUMBER", description: "Goals conceded" },
+    unsaveableGoals: { type: "NUMBER", description: "Goals that were unsaveable (e.g., deflections, penalties with no chance)" },
+    errorsLeadingToGoal: { type: "NUMBER", description: "Goalkeeper errors directly leading to a goal" },
+    crossesFaced: { type: "NUMBER", description: "Total crosses into the box faced" },
+    crossesClaimed: { type: "NUMBER", description: "Crosses cleanly caught/claimed" },
+    crossesPunched: { type: "NUMBER", description: "Crosses punched clear" },
+    crossesMissed: { type: "NUMBER", description: "Crosses missed or dropped" },
+    oneVOneFaced: { type: "NUMBER", description: "1v1 situations faced" },
+    oneVOneSaved: { type: "NUMBER", description: "1v1 situations saved" },
+    distributionAccuracyPercent: { type: "NUMBER", description: "Distribution accuracy as a decimal 0.0-1.0" },
+    positioningRating: { type: "NUMBER", description: "Positioning quality rating 1-10" },
+    communicationRating: { type: "NUMBER", description: "Communication/organization rating 1-10" },
+    composure: { type: "NUMBER", description: "Composure under pressure rating 1-10" },
+    overallRating: { type: "NUMBER", description: "Overall goalkeeper performance rating 1-10" },
+    strengthNote1: { type: "STRING", description: "First key strength observed" },
+    strengthNote2: { type: "STRING", description: "Second key strength observed" },
+    strengthNote3: { type: "STRING", description: "Third key strength observed" },
+    weaknessNote1: { type: "STRING", description: "First area to improve" },
+    weaknessNote2: { type: "STRING", description: "Second area to improve" },
+    coachComments: { type: "STRING", description: "2-3 sentence coaching summary of the performance" },
   },
   required: ["saves", "shotsOnTargetFaced", "goalsConceded", "overallRating", "coachComments"],
 };
@@ -77,49 +79,90 @@ interface AnalyzeVideoParams {
 // ── Main export ──────────────────────────────────────────────────────────────
 
 export async function analyzeVideo(params: AnalyzeVideoParams): Promise<string> {
-  const { filePath, signedUrl, keeperId, clipId, matchDate, opponent, coachUserId, sessionType } = params;
+  const { filePath, keeperId, clipId, matchDate, opponent, coachUserId, sessionType } = params;
+
+  logger.info("Starting Google AI video analysis", { keeperId, clipId, sessionType });
 
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY environment variable is not set");
-  }
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set in the environment. Cannot access Gemini.");
 
-  logger.info("Starting Gemini video analysis", { keeperId, clipId, sessionType });
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash", // Updated to 2.5-flash as used in web app
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: ANALYSIS_SCHEMA as any,
-    },
-  });
+  const ai = new GoogleGenAI({ apiKey });
 
   // Determine MIME type from file path
   const mimeType = filePath.endsWith(".mov") ? "video/quicktime" : "video/mp4";
-
+  
+  const bucket = admin.storage().bucket();
   let analysisResult: any;
+  let geminiFileName = "";
 
   try {
     const promptToUse = sessionType === "practice" ? PRACTICE_PROMPT : GAME_PROMPT;
-    
-    const result = await model.generateContent([
-      promptToUse,
-      {
-        fileData: {
-          mimeType,
-          fileUri: signedUrl,
-        },
-      },
-    ]);
 
-    const rawText = result.response.text();
+    // 1. Download to memory buffer
+    const fileName = path.basename(filePath);
+    const tempFilePath = path.join(os.tmpdir(), fileName);
+    logger.info("Downloading video for analysis to memory:", { tempFilePath });
+    await bucket.file(filePath).download({ destination: tempFilePath });
+
+    // 2. Upload to Gemini AI Studio
+    logger.info("Uploading buffer to Gemini AI Studio...");
+    let uploadedFile = await ai.files.upload({ file: tempFilePath, config: { mimeType } });
+    if (!uploadedFile.name) throw new Error("Failed to get file name from Gemini File API");
+    geminiFileName = uploadedFile.name;
+
+    // Delete local buffer
+    try {
+      const fs = require('fs');
+      if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+    } catch (e) {}
+
+    // 3. Poll for processing completion
+    logger.info("Waiting for Gemini natively process video...", { geminiFileName });
+    while (uploadedFile.state === "PROCESSING") {
+      await new Promise(r => setTimeout(r, 5000));
+      uploadedFile = await ai.files.get({ name: geminiFileName });
+    }
+
+    if (uploadedFile.state === "FAILED") {
+      throw new Error("Gemini File API failed to process the video");
+    }
+
+    // 4. Generate Content
+    logger.info("Prompting Gemini model with video context...");
+    const result = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: promptToUse },
+            { fileData: { fileUri: uploadedFile.uri, mimeType: uploadedFile.mimeType } }
+          ],
+        }
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: ANALYSIS_SCHEMA as any,
+      }
+    });
+
+    const rawText = result.text;
+    if (!rawText) throw new Error("No text response received from Gemini");
+    
     analysisResult = JSON.parse(rawText);
 
     logger.info("Gemini analysis complete", { keeperId, clipId, overallRating: analysisResult.overallRating });
   } catch (err) {
     logger.error("Gemini analysis failed", { keeperId, clipId, err });
     throw err;
+  } finally {
+    // 5. Cleanup the uploaded video from AI Studio to prevent billing leaks
+    if (geminiFileName) {
+      try {
+        await ai.files.delete({ name: geminiFileName }).catch(() => {});
+        logger.info("Cleaned up video from Gemini context", { geminiFileName });
+      } catch (e) {}
+    }
   }
 
   // Build the Firestore MatchReport document
@@ -131,7 +174,7 @@ export async function analyzeVideo(params: AnalyzeVideoParams): Promise<string> 
     coachUserId,
     matchDate: matchDate ? admin.firestore.Timestamp.fromDate(new Date(matchDate)) : now,
     opponent: opponent ?? null,
-    sessionType: sessionType ?? "game", // ADDED: sessionType field
+    sessionType: sessionType ?? "game",
     overallRating: clamp(analysisResult.overallRating ?? 5, 1, 10),
     shotsOnTargetFaced: positiveInt(analysisResult.shotsOnTargetFaced),
     saves: positiveInt(analysisResult.saves),

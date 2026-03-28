@@ -1,6 +1,5 @@
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { collection, addDoc, updateDoc, serverTimestamp, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { detectActionSegments, extractActionClip } from "./motion-detect.js";
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Analysis is triggered server-side by the onWebSessionUploaded Storage trigger.
 // No Gemini API key in this file.
@@ -8,6 +7,42 @@ import { detectActionSegments, extractActionClip } from "./motion-detect.js";
 let selectedFiles = [];
 let activeUploadTasks = [];
 let uploadInProgress = false;
+
+// --- Upload Resilience Features ---
+let wakeLock = null;
+
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Screen Wake Lock acquired to prevent sleep during upload');
+        }
+    } catch (err) {
+        console.warn(`Wake Lock error: ${err.message}`);
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock !== null) {
+        wakeLock.release().then(() => { wakeLock = null; });
+    }
+}
+
+function handleVisibilityChange() {
+    if (!uploadInProgress) return;
+    const progressText = document.getElementById('progressText');
+    if (document.hidden) {
+        console.log("Tab backgrounded. Pausing uploads to prevent forced OS termination...");
+        if (progressText) progressText.textContent = 'Upload auto-paused while backgrounded. Waiting to resume...';
+        activeUploadTasks.forEach(task => { try { task.pause(); } catch(e){} });
+    } else {
+        console.log("Tab visible. Resuming uploads...");
+        if (progressText) progressText.textContent = `Scanning and uploading ${selectedFiles.length} video(s)...`;
+        if (wakeLock === null) requestWakeLock(); // Re-acquire if OS dropped it
+        activeUploadTasks.forEach(task => { try { task.resume(); } catch(e){} });
+    }
+}
+// ----------------------------------
 
 function beforeUnloadHandler(e) {
     e.preventDefault();
@@ -20,6 +55,8 @@ export function cancelActiveUploads() {
     activeUploadTasks = [];
     uploadInProgress = false;
     window.removeEventListener('beforeunload', beforeUnloadHandler);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    releaseWakeLock();
 
     const submitBtn = document.getElementById('submitUploadBtn');
     if (submitBtn) {
@@ -137,16 +174,19 @@ async function handleUpload(currentUser, firebase) {
     document.querySelectorAll('.file-remove-btn').forEach(b => b.disabled = true);
     progressBar.style.display = 'block';
     window.addEventListener('beforeunload', beforeUnloadHandler);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    requestWakeLock();
 
     const now = Date.now();
     const storagePaths = selectedFiles.map((file, i) =>
         `videos/${currentUser.uid}/${now}_${i}_${file.name}`
     );
 
+    let sessionRef = null;
     try {
         // ── Create session doc ──────────────────────────────────────────────
         progressText.textContent = 'Creating session…';
-        const sessionRef = await addDoc(collection(db, 'users', currentUser.uid, 'sessions'), {
+        sessionRef = await addDoc(collection(db, 'users', currentUser.uid, 'sessions'), {
             label,
             myTeam,
             opponent,
@@ -183,39 +223,15 @@ async function handleUpload(currentUser, firebase) {
             const fillEl = document.getElementById(`file-fill-${i}`);
 
             let uploadBlob = file;
-            let actionSegments = null;
 
-            // Step A: Motion detection (sequential mutex to prevent crashes)
-            await (motionMutex = motionMutex.then(async () => {
-                if (!uploadInProgress) return;
-                try {
-                    const segments = await detectActionSegments(file, (p) => {
-                        if (fillEl) fillEl.style.width = `${Math.round(p * 40)}%`;
-                        fileProgresses[i] = Math.round(p * 15);
-                        updateGlobalProgress();
-                    });
-                    actionSegments = segments;
-                    console.log(`[upload] Action segments for ${videoName}:`, segments);
-
-                    uploadBlob = await extractActionClip(file, segments, (p) => {
-                        if (fillEl) fillEl.style.width = `${40 + Math.round(p * 20)}%`;
-                        fileProgresses[i] = 15 + Math.round(p * 10);
-                        updateGlobalProgress();
-                    });
-
-                    if (uploadBlob !== file) {
-                        const savedMB = ((file.size - uploadBlob.size) / 1048576).toFixed(1);
-                        console.log(`[upload] Trimmed ${videoName}: saved ${savedMB} MB`);
-                    }
-                } catch (motionErr) {
-                    console.warn('[upload] Motion detection failed, using original:', motionErr);
-                    uploadBlob = file;
-                }
-            }));
+            // Immediately set to 15% to indicate we are preparing network upload
+            fileProgresses[i] = 15;
+            if (fillEl) fillEl.style.width = '15%';
+            updateGlobalProgress();
 
             if (!uploadInProgress) return null;
 
-            // Step B: Upload trimmed clip to Firebase Storage only
+            // Step B: Upload directly to Firebase Storage
             const url = await new Promise((resolve, reject) => {
                 const storageRef = ref(storage, storagePaths[i]);
                 const task = uploadBytesResumable(storageRef, uploadBlob, { contentType: mimeType });
@@ -223,8 +239,10 @@ async function handleUpload(currentUser, firebase) {
                 task.on('state_changed',
                     (snap) => {
                         const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-                        if (fillEl) fillEl.style.width = `${60 + Math.round(pct * 0.4)}%`;
-                        fileProgresses[i] = 25 + Math.round(pct * 0.75);
+                        // Scale percentage realistically from 15% to 100%
+                        const mappedPct = 15 + Math.round(pct * 0.85);
+                        if (fillEl) fillEl.style.width = `${mappedPct}%`;
+                        fileProgresses[i] = mappedPct;
                         updateGlobalProgress();
                     },
                     (err) => err.code === 'storage/canceled' ? resolve(null) : reject(err),
@@ -239,16 +257,27 @@ async function handleUpload(currentUser, firebase) {
                 storagePath: storagePaths[i],
                 name: videoName,
                 mimeType,
-                actionSegments,
+                actionSegments: null,
             };
         });
 
         const settledResults = await Promise.allSettled(uploadPromises);
+        
+        // If there are failures, throw an error so the UI handles it and resets
+        const failures = settledResults.filter(r => r.status === 'rejected');
+        if (failures.length > 0) {
+            console.error("Detailed upload failures:", failures.map(f => f.reason));
+            const exactError = failures[0].reason?.message || 'Unknown network error';
+            throw new Error(`Failed to upload ${failures.length} video(s). Reason: ${exactError}`);
+        }
+
         const results = settledResults
             .filter(r => r.status === 'fulfilled' && r.value !== null)
             .map(r => r.value);
 
-        if (results.length === 0) return;
+        if (results.length === 0) {
+            throw new Error("No videos were successfully uploaded.");
+        }
 
         // ── Save URLs + actionSegments to Firestore, then let backend trigger analysis ──
         await updateDoc(sessionRef, {
@@ -267,6 +296,8 @@ async function handleUpload(currentUser, firebase) {
         uploadInProgress = false;
         activeUploadTasks = [];
         window.removeEventListener('beforeunload', beforeUnloadHandler);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        releaseWakeLock();
         submitBtn.disabled = false;
         submitBtn.textContent = 'Upload Videos';
         submitBtn.classList.remove('uploading-btn');
@@ -289,10 +320,16 @@ async function handleUpload(currentUser, firebase) {
         uploadInProgress = false;
         activeUploadTasks = [];
         window.removeEventListener('beforeunload', beforeUnloadHandler);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        releaseWakeLock();
         submitBtn.disabled = false;
         submitBtn.textContent = 'Upload Videos';
         submitBtn.classList.remove('uploading-btn');
         if (cancelBtn) cancelBtn.textContent = 'Cancel';
+        if (sessionRef) {
+            deleteDoc(sessionRef).catch(e => console.warn('Failed to clean up session doc:', e));
+        }
+        
         errorEl.textContent = `Upload failed: ${err.message}`;
         errorEl.style.display = 'block';
         progressBar.style.display = 'none';
