@@ -188,6 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="player-email">${player.email || ''}</span>
                         ${trialBadge}
                     </div>
+                    <div class="roster-actions">
                         <button class="btn sm-btn outline-btn edit-player-btn"
                             data-uid="${player.uid}"
                             data-name="${name}"

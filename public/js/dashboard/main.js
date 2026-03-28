@@ -69,10 +69,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('welcomeMsg').textContent = `Welcome back, ${firstName}!`;
 
         // Set context for Ted Chatbot
+        // Note: player data (sessions, skills, ratings) is now fetched server-side by tedChat.ts
+        // using the verified Firebase Auth UID — nothing sensitive is trusted from the client.
         if (window.setTedContext) {
             try {
                 const idToken = await user.getIdToken();
-                window.setTedContext(idToken, { name: fullName, uid: targetUid });
+                window.setTedContext(idToken, { uid: targetUid });
             } catch (err) {
                 console.error("Failed to init Ted context:", err);
             }
