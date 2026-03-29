@@ -920,6 +920,14 @@ body.admin-bg {
     border-radius: 100px;
     padding: 2px 8px;
 }
+.step-timestamp {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: rgba(148,163,184,0.55);
+    font-variant-numeric: tabular-nums;
+}
 
 /* ── Re-analyze Button ──────────────────────────────────── */
 .reanalyze-btn {
