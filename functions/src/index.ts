@@ -39,6 +39,8 @@ export { activateTrial } from "./callables/activateTrial";
 export { checkTrialStatus } from "./callables/checkTrialStatus";
 export { redeemPromoCode } from "./callables/redeemPromoCode";
 export { tedChat } from "./callables/tedChat";
+export { createShareLink } from "./callables/createShareLink";
+export { logSharedReportView } from "./callables/logSharedReportView";
 
 // ── Firestore Triggers ──────────────────────────────────────
 export { onUserCreated } from "./triggers/onUserCreated";

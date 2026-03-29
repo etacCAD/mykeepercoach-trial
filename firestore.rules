@@ -57,6 +57,15 @@ service cloud.firestore {
     }
 
     // ============================================================
+    // SHARED REPORTS
+    // ============================================================
+
+    match /sharedReports/{reportId} {
+      allow read: if request.time < resource.data.expiresAt;
+      allow write: if false; // Only Cloud Functions can create them
+    }
+
+    // ============================================================
     // TED CONVERSATIONS
     // ============================================================
     

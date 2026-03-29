@@ -193,7 +193,11 @@ async function handleUpload(currentUser, firebase) {
             gameDate: rawDate,
             goalieNumber: goalieNumber || null,
             jerseyColor: jerseyColor || null,
-            videos: storagePaths.map((p, i) => ({ storagePath: p, name: selectedFiles[i].name })),
+            videos: storagePaths.map((p, i) => ({ 
+                storagePath: p, 
+                name: selectedFiles[i].name,
+                size: selectedFiles[i].size
+            })),
             status: 'pending',
             createdAt: serverTimestamp(),
             uploadedAt: null,
@@ -257,6 +261,7 @@ async function handleUpload(currentUser, firebase) {
                 storagePath: storagePaths[i],
                 name: videoName,
                 mimeType,
+                size: file.size,
                 actionSegments: null,
             };
         });
@@ -286,6 +291,7 @@ async function handleUpload(currentUser, firebase) {
                 storagePath: r.storagePath,
                 name: r.name,
                 mimeType: r.mimeType,
+                size: r.size,
                 actionSegments: r.actionSegments || null,
             })),
             videoURL: results[0].url,

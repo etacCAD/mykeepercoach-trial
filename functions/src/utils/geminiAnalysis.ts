@@ -59,6 +59,13 @@ export function buildWebSessionPrompt(params: {
 Match: ${matchLabel}. ${numberLine} ${colorLine}${segmentHint}
 ${ageInstruction}
 
+CRITICAL INSTRUCTIONS FOR VIDEO ANALYSIS:
+- Focus EXCLUSIVELY on the goalkeeper.
+- The footage may be filmed from a wide variety of angles (behind the goal, midfield, or side angles).
+- For side-angle footage or noisy environments, DO NOT interpret background noise, substitute players, crowd movements, parents, or passing cars as on-field action.
+- Only analyze the purposeful movements, saves, positioning, and distribution of the active goalkeeper.
+- Ignore camera panning artifacts or blurriness.
+
 Watch this goalkeeper footage carefully and return ONLY a valid JSON object (no markdown, no explanation) matching this exact schema:
 
 {

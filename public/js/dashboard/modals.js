@@ -1,8 +1,10 @@
 import { deleteDoc, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { clearSelectedFiles, cancelActiveUploads } from "./upload.js?v=3";
 
 let pendingDeleteSessionId = null;
 let pendingEditSessionId = null;
+let currentAnalysisSessionId = null;
 
 export function addModalListeners(currentUser, firebase) {
     // Upload modal
@@ -36,6 +38,48 @@ export function addModalListeners(currentUser, firebase) {
     document.getElementById('analysisModal').addEventListener('click', (e) => {
         if (e.target === document.getElementById('analysisModal')) closeAnalysisModal();
     });
+    
+    // Share Report
+    const shareBtn = document.getElementById('shareReportBtn');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', async () => {
+            if (!currentAnalysisSessionId) return;
+            shareBtn.disabled = true;
+            shareBtn.textContent = 'Creating link...';
+            const statusTxt = document.getElementById('shareStatusText');
+            statusTxt.style.display = 'none';
+            statusTxt.textContent = '';
+            
+            try {
+                const functions = getFunctions(firebase.app);
+                const createShareLink = httpsCallable(functions, 'createShareLink');
+                const res = await createShareLink({ sessionId: currentAnalysisSessionId });
+                const shareUrl = window.location.origin + '/report.html?id=' + res.data.shareId;
+                
+                await navigator.clipboard.writeText(shareUrl);
+                
+                // Show toast
+                const toast = document.getElementById('toastNotification');
+                if (toast) {
+                    toast.textContent = 'Shareable link copied to clipboard!';
+                    toast.style.display = 'block';
+                    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+                }
+                
+                statusTxt.textContent = 'Copied!';
+                statusTxt.style.color = 'var(--accent-green)';
+                statusTxt.style.display = 'inline';
+            } catch (err) {
+                console.error("Failed to create share link:", err);
+                statusTxt.textContent = 'Failed to create link.';
+                statusTxt.style.color = '#ef4444';
+                statusTxt.style.display = 'inline';
+            } finally {
+                shareBtn.disabled = false;
+                shareBtn.textContent = '🔗 Share';
+            }
+        });
+    }
 
     // Delete modal
     document.getElementById('closeDeleteModal').addEventListener('click', closeDeleteModal);
@@ -175,13 +219,19 @@ function parseTimestamp(ts) {
 }
 
 export function openAnalysisModal(session) {
+    currentAnalysisSessionId = session.id;
     const modal   = document.getElementById('analysisModal');
     const title   = document.getElementById('analysisTitle');
     const content = document.getElementById('analysisContent');
+    const shareBtn = document.getElementById('shareReportBtn');
+    const statusTxt = document.getElementById('shareStatusText');
+    
+    if (statusTxt) statusTxt.style.display = 'none';
 
     title.textContent = session.label || 'Full Analysis';
 
     if (!session.analysis) {
+        if (shareBtn) shareBtn.style.display = 'none';
         const statusMsg = session.status === 'processing' || session.status === 'pending'
             ? `<div class="analyzing-state"><div class="analyzing-spinner"></div><p>Gemini is analyzing your footage…<br><span class="muted-text">This usually takes 1–3 minutes.</span></p></div>`
             : session.status === 'failed'
@@ -189,6 +239,7 @@ export function openAnalysisModal(session) {
             : `<div class="empty-state"><p>Analysis not ready yet. Check back soon!</p></div>`;
         content.innerHTML = statusMsg;
     } else {
+        if (shareBtn) shareBtn.style.display = 'inline-block';
         const a = session.analysis;
         const date = session.createdAt
             ? new Date(session.createdAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -241,9 +292,38 @@ export function openAnalysisModal(session) {
         const videoContainer = document.getElementById('highlightVideoContainer');
         const videoPlayer = document.getElementById('highlightVideoPlayer');
         if (videoPlayer && videoContainer) {
+            let existingTabs = document.getElementById('dashboardVideoTabs');
+            if (existingTabs) existingTabs.remove();
+            
             if (videoUrl && highlightsHtml) {
                 videoPlayer.src = videoUrl;
-                videoContainer.style.display = 'none';
+
+                if (session.videos && session.videos.length > 1) {
+                    let tabsHtml = `<div id="dashboardVideoTabs" style="display:flex; gap:8px; margin-bottom:12px;">`;
+                    session.videos.forEach((v, idx) => {
+                        const title = v.title || `Part ${idx + 1}`;
+                        tabsHtml += `<button class="btn sm-btn ${idx === 0 ? 'primary-btn' : 'outline-btn'} dash-video-part-btn" data-url="${v.url}" style="flex:1;">${title}</button>`;
+                    });
+                    tabsHtml += `</div>`;
+                    videoPlayer.insertAdjacentHTML('beforebegin', tabsHtml);
+                    
+                    document.querySelectorAll('.dash-video-part-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            document.querySelectorAll('.dash-video-part-btn').forEach(b => {
+                                b.classList.remove('primary-btn');
+                                b.classList.add('outline-btn');
+                            });
+                            const targetBtn = e.target;
+                            targetBtn.classList.remove('outline-btn');
+                            targetBtn.classList.add('primary-btn');
+                            const wasPlaying = !videoPlayer.paused;
+                            videoPlayer.src = targetBtn.getAttribute('data-url');
+                            if (wasPlaying) videoPlayer.play().catch(err => console.error("Playback failed", err));
+                        });
+                    });
+                }
+                
+                videoContainer.style.display = 'none'; // Actually kept as none by default until highlight is clicked
             } else {
                 videoPlayer.src = '';
                 videoContainer.style.display = 'none';

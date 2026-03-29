@@ -404,10 +404,56 @@ function renderSessionCard(s) {
         const statusMsg = (s.errorMessage || '').toLowerCase();
         const videoCount = s.videos?.length || 1;
 
-        // Scale ETA by video count: ~3 min base + 2 min per video to underpromise and overdeliver (adding >50% buffer)
-        const TOTAL_EST_MINS = 3 + (videoCount * 2);
-        const remainingMin = Math.max(1, TOTAL_EST_MINS - elapsedMin);
-        const dynamicEta = remainingMin <= 1 ? '< 1 min' : `~${remainingMin} min`;
+        // Calculate dynamic ETA based on average historical processing time per Megabyte
+        const readySessions = cachedSessions.filter(sess => 
+            sess.status === 'ready' && sess.createdAt?.seconds && sess.analyzedAt?.seconds
+        );
+        
+        let avgMinsPerMB = 0.6; // Fallback: 50MB takes ~30 mins
+        if (readySessions.length > 0) {
+            const recent = readySessions.slice(0, 5);
+            let totalMins = 0;
+            let totalMB = 0;
+            recent.forEach(rs => {
+                const diffSecs = rs.analyzedAt.seconds - rs.createdAt.seconds;
+                if (diffSecs > 0) {
+                    totalMins += diffSecs / 60;
+                    let sessionMB = 0;
+                    if (rs.videos && rs.videos.length > 0) {
+                        rs.videos.forEach(v => {
+                            if (v.size) sessionMB += v.size / (1024 * 1024);
+                        });
+                    }
+                    if (sessionMB === 0) sessionMB = 50 * (rs.videos?.length || 1); // 50MB fallback for legacy sessions
+                    totalMB += sessionMB;
+                }
+            });
+            if (totalMB > 0) avgMinsPerMB = totalMins / totalMB;
+        }
+
+        let currentMB = 0;
+        if (s.videos && s.videos.length > 0) {
+            s.videos.forEach(v => {
+                if (v.size) currentMB += v.size / (1024 * 1024);
+            });
+        }
+        if (currentMB === 0) currentMB = 50 * videoCount;
+
+        // Add 3 min queue/startup buffer + average processing time scaled by current upload size
+        let calcEst = 3 + (avgMinsPerMB * currentMB);
+        
+        // Cap estimate: Min 5 minutes, Max 4 hours (240 mins)
+        const TOTAL_EST_MINS = Math.floor(Math.min(Math.max(calcEst, 5), 240));
+
+        let remainingMin = Math.max(1, TOTAL_EST_MINS - elapsedMin);
+        
+        // Format ETA gracefully
+        let dynamicEta = remainingMin <= 1 ? '< 1 min' : `~${remainingMin} min`;
+        if (remainingMin >= 60) {
+            const hrs = Math.floor(remainingMin / 60);
+            const mins = remainingMin % 60;
+            dynamicEta = mins > 0 ? `~${hrs}h ${mins}m` : `~${hrs}h`;
+        }
 
         // Derive pipeline step from the real errorMessage written by analysis.js
         const isProcessing = s.status === 'processing';

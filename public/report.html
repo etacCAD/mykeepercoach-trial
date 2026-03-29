@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Keeper Coach — Shared Report</title>
+    <link rel="stylesheet" href="/css/styles.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+        }
+        .report-container {
+            width: 100%;
+            max-width: 800px;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .report-header h1 {
+            font-size: 24px;
+            margin: 0;
+            color: var(--accent);
+        }
+        .report-header h2 {
+            font-size: 20px;
+            margin: 8px 0 0 0;
+            color: var(--text-primary);
+        }
+        .report-header p {
+            margin: 4px 0 0 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .cta-footer {
+            margin-top: 40px;
+            padding: 32px;
+            text-align: center;
+            background: rgba(var(--accent-rgb), 0.1);
+            border: 1px solid rgba(var(--accent-rgb), 0.3);
+            border-radius: 16px;
+        }
+        
+        .cta-footer h3 {
+            margin: 0 0 12px 0;
+            color: var(--text-primary);
+        }
+        
+        .cta-footer a {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 12px 24px;
+            background: var(--accent);
+            color: #000;
+            text-decoration: none;
+            font-weight: 800;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .cta-footer a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="report-container">
+        
+        <div id="loadingState" style="text-align: center; padding: 60px;">
+            <div class="analyzing-spinner" style="margin: 0 auto;"></div>
+            <p style="margin-top:16px;">Loading Report...</p>
+        </div>
+
+        <div id="errorState" class="empty-state glassmorphism" style="display: none; padding: 40px; text-align: center;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="margin:0 auto 16px; display:block;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <h2 id="errorTitle">Link Expired or Invalid</h2>
+            <p id="errorDesc" class="muted-text">This shared report might have expired after 48 hours,<br>or the link is incorrect.</p>
+        </div>
+
+        <div id="reportContent" style="display: none;">
+            <div class="report-header glassmorphism" style="padding: 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <h1>My Keeper Coach</h1>
+                <h2 id="reportTitle">Game Report</h2>
+                <p id="reportMeta"></p>
+            </div>
+            
+            <div id="highlightVideoContainer" style="display:none; margin-top: 24px;">
+                <video id="highlightVideoPlayer" controls style="width: 100%; border-radius: 12px; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></video>
+            </div>
+
+            <div class="glassmorphism" style="margin-top: 24px; padding: 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <div id="analysisContent">
+                    <!-- Javascript populates stats, charts, text here -->
+                </div>
+            </div>
+            
+            <div class="cta-footer">
+                <h3>Want elite stats & AI coaching?</h3>
+                <p class="muted-text">Track your games, get pro-level feedback, and accelerate your development today.</p>
+                <a href="/">Try My Keeper Coach</a>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module" src="/js/firebase-config.js"></script>
+    <script type="module" src="/js/report.js?v=2"></script>
+</body>
+</html>
