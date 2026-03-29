@@ -404,8 +404,8 @@ function renderSessionCard(s) {
         const statusMsg = (s.errorMessage || '').toLowerCase();
         const videoCount = s.videos?.length || 1;
 
-        // Scale ETA by video count: ~2 min base + 1 min per video
-        const TOTAL_EST_MINS = 2 + videoCount;
+        // Scale ETA by video count: ~3 min base + 2 min per video to underpromise and overdeliver (adding >50% buffer)
+        const TOTAL_EST_MINS = 3 + (videoCount * 2);
         const remainingMin = Math.max(1, TOTAL_EST_MINS - elapsedMin);
         const dynamicEta = remainingMin <= 1 ? '< 1 min' : `~${remainingMin} min`;
 
@@ -417,16 +417,61 @@ function renderSessionCard(s) {
         const isOnServer = statusMsg.includes('processing video on ai');
         const isGenerating = isProcessing && elapsedMin >= TOTAL_EST_MINS - 1;
 
+        const stepTs = s.stepTimestamps || {};
+
+        // Helper: format a Firestore timestamp to a readable time string
+        function fmtTs(ts) {
+            if (!ts) return null;
+            const ms = ts.seconds ? ts.seconds * 1000 : null;
+            if (!ms) return null;
+            return new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+        }
+
+        // Helper: compute duration string between two Firestore timestamps
+        function fmtDuration(startTs, endTs) {
+            if (!startTs || !endTs) return null;
+            const startMs = startTs.seconds ? startTs.seconds * 1000 : null;
+            const endMs   = endTs.seconds   ? endTs.seconds   * 1000 : null;
+            if (!startMs || !endMs || endMs <= startMs) return null;
+            const diffSec = Math.round((endMs - startMs) / 1000);
+            if (diffSec < 60) return `${diffSec}s`;
+            const m = Math.floor(diffSec / 60), sec = diffSec % 60;
+            return sec > 0 ? `${m}m ${sec}s` : `${m}m`;
+        }
+
+        // Step timing data — maps each step to its completion timestamp and prior start
+        const stepTimingMap = [
+            { startTs: null,                         endTs: s.createdAt },
+            { startTs: s.createdAt,                  endTs: stepTs.queuedAt },
+            { startTs: stepTs.queuedAt,              endTs: stepTs.processingStartedAt },
+            { startTs: stepTs.processingStartedAt,   endTs: stepTs.aiAnalysisStartedAt },
+            { startTs: stepTs.aiAnalysisStartedAt,   endTs: s.analyzedAt },
+        ];
+
+        // Console log: structured timing report for debugging / analysis
+        if (s.status !== 'pending') {
+            console.group(`[Pipeline Timing] ${s.label || s.id}`);
+            console.table({
+                '1 Videos Uploaded':    { time: fmtTs(s.createdAt), duration: '—' },
+                '2 Queued':             { time: fmtTs(stepTs.queuedAt),             duration: fmtDuration(s.createdAt, stepTs.queuedAt) || '…' },
+                '3 Processing':         { time: fmtTs(stepTs.processingStartedAt),  duration: fmtDuration(stepTs.queuedAt, stepTs.processingStartedAt) || '…' },
+                '4 AI Analyzing':       { time: fmtTs(stepTs.aiAnalysisStartedAt),  duration: fmtDuration(stepTs.processingStartedAt, stepTs.aiAnalysisStartedAt) || '…' },
+                '5 Report Generated':   { time: fmtTs(s.analyzedAt),               duration: fmtDuration(stepTs.aiAnalysisStartedAt, s.analyzedAt) || '…' },
+                '— TOTAL —':            { time: fmtTs(s.analyzedAt),               duration: fmtDuration(s.createdAt, s.analyzedAt) || '…' },
+            });
+            console.groupEnd();
+        }
+
         const uploadedTime = s.createdAt
             ? new Date(s.createdAt.seconds * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
             : '';
 
         const steps = [
-            { label: `Videos Uploaded${uploadedTime ? ' · ' + uploadedTime : ''}`, done: true, active: false, eta: null },
-            { label: 'Queued for Analysis',     done: isProcessing,                                 active: s.status === 'pending', eta: dynamicEta },
+            { label: `Videos Uploaded${uploadedTime ? ' · ' + uploadedTime : ''}`, done: true,     active: false,                                            eta: null },
+            { label: 'Queued for Analysis',     done: isProcessing,                                 active: s.status === 'pending',                           eta: dynamicEta },
             { label: 'Processing Video',        done: isProcessing && (isAnalyzing || isGenerating), active: isProcessing && (isVerifying || isUploading || isOnServer), eta: dynamicEta },
-            { label: 'AI Analyzing Footage',    done: isGenerating,                                  active: isProcessing && isAnalyzing && !isGenerating, eta: dynamicEta },
-            { label: 'Generating Your Report',  done: false,                                         active: isGenerating, eta: dynamicEta },
+            { label: 'AI Analyzing Footage',    done: isGenerating,                                  active: isProcessing && isAnalyzing && !isGenerating,     eta: dynamicEta },
+            { label: 'Generating Your Report',  done: false,                                         active: isGenerating,                                     eta: dynamicEta },
         ];
 
         // Find active step for the ETA label
@@ -435,9 +480,24 @@ function renderSessionCard(s) {
 
         const stepDots = steps.map((st, i) => {
             const cls = st.done ? 'step-dot step-done' : st.active ? 'step-dot step-active' : 'step-dot step-waiting';
+
+            // Build time + duration annotation for completed steps
+            let timeAnnotation = '';
+            if (st.done && i < stepTimingMap.length) {
+                const { endTs, startTs } = stepTimingMap[i];
+                const tsStr = fmtTs(endTs);
+                const dur = fmtDuration(startTs, endTs);
+                const parts = [];
+                if (tsStr) parts.push(tsStr);
+                if (dur) parts.push(`(${dur})`);
+                if (parts.length) {
+                    timeAnnotation = `<span class="step-timestamp">${parts.join(' ')}</span>`;
+                }
+            }
+
             return `<div class="step-row">
                 <div class="${cls}">${st.done ? '✓' : st.active ? '<span class="analyzing-dot"></span>' : ''}</div>
-                <span class="step-label ${st.active ? 'step-label--active' : st.done ? 'step-label--done' : ''}">${st.label}</span>
+                <span class="step-label ${st.active ? 'step-label--active' : st.done ? 'step-label--done' : ''}">${st.label}${timeAnnotation}</span>
             </div>`;
         }).join('');
 
