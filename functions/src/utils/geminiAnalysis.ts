@@ -14,7 +14,12 @@ import * as admin from "firebase-admin";
 import { GoogleGenAI } from "@google/genai";
 import * as path from "path";
 import * as os from "os";
+import * as fs from "fs";
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 import { GEMINI_MODEL } from "../constants";
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 // ── Prompt Builder ───────────────────────────────────────────────────────────
 
@@ -148,33 +153,78 @@ export async function analyzeWebSession({
     // Initialize AI Studio SDK
     const ai = new GoogleGenAI({ apiKey });
     
-    // Download and upload each video to Gemini File API
-    const geminiVideoParts: any[] = [];
+    // Record: video processing has started
+    await sessionRef.update({
+      "stepTimestamps.processingStartedAt": admin.firestore.FieldValue.serverTimestamp(),
+    });
     
-    for (const storagePath of allVideoPaths) {
-      console.log(`[gemini] Processing video: ${storagePath}`);
+    // SEQUENTIALLY download, compress (if needed), upload to Gemini, and delete local buffers
+    // This protects the 8GB memory limit from being exceeded by multiple massive videos concurrently.
+    const fileUploadResults = [];
+    
+    for (let index = 0; index < allVideoPaths.length; index++) {
+      const storagePath = allVideoPaths[index];
+      console.log(`[gemini] [Video ${index + 1}] Processing video: ${storagePath}`);
       
       const fileName = path.basename(storagePath);
-      const tempFilePath = path.join(os.tmpdir(), fileName);
-      const mimeType = storagePath.toLowerCase().endsWith(".mov") ? "video/mov" : "video/mp4";
+      const tempFilePath = path.join(os.tmpdir(), `${sessionRef.id}-${index}-${fileName}`);
+      let mimeType = storagePath.toLowerCase().endsWith(".mov") ? "video/quicktime" : "video/mp4";
       
-      console.log(`[gemini] Downloading to local temp memory buffer: ${tempFilePath}`);
+      console.log(`[gemini] [Video ${index + 1}] Downloading to local temp memory buffer: ${tempFilePath}`);
       await bucket.file(storagePath).download({ destination: tempFilePath });
+
+      // Conditional compression if file size > 1.8 GB
+      const stats = fs.statSync(tempFilePath);
+      const fileSizeInBytes = stats.size;
+      const ONE_POINT_EIGHT_GB = 1.8 * 1024 * 1024 * 1024;
+      let finalUploadPath = tempFilePath;
+
+      if (fileSizeInBytes > ONE_POINT_EIGHT_GB) {
+        console.log(`[gemini] [Video ${index + 1}] is large (${(fileSizeInBytes / (1024 * 1024)).toFixed(2)} MB), compressing via ffmpeg...`);
+        const compressedPath = path.join(os.tmpdir(), `compressed_${sessionRef.id}-${index}-${fileName}.mp4`);
+        
+        await new Promise<void>((resolve, reject) => {
+          ffmpeg(tempFilePath)
+            .outputOptions([
+              "-c:v libx264",
+              "-crf 28", // Compresses visual quality reasonably
+              "-preset ultrafast", // Fastest encoding speed for cloud functions
+              "-c:a aac",
+              "-b:a 128k",
+              "-s 1280x720" // Downscale to 720p maximum
+            ])
+            .on("start", (cmd: string) => console.log(`[gemini] [Video ${index + 1}] FFMPEG Start:`, { cmd }))
+            .on("end", () => resolve())
+            .on("error", (err: Error) => reject(err))
+            .save(compressedPath);
+        });
+
+        finalUploadPath = compressedPath;
+        mimeType = "video/mp4"; // Output from libx264 defaults to mp4 wrapper standard here
+        console.log(`[gemini] [Video ${index + 1}] Compression complete.`);
+      }
       
-      console.log(`[gemini] Uploading temp buffer to Gemini AI Studio File API...`);
-      let uploadedFile = await ai.files.upload({ file: tempFilePath, config: { mimeType } });
+      console.log(`[gemini] [Video ${index + 1}] Uploading to Gemini AI Studio File API...`);
+      let uploadedFile = await ai.files.upload({ file: finalUploadPath, config: { mimeType } });
       
       if (!uploadedFile.name) throw new Error(`Gemini File API returned no file name for ${fileName}`);
       uploadedGeminiFiles.push(uploadedFile.name);
       
-      // Delete the temp file from memory immediately to save space!
+      // Delete local buffers IMMEDIATELY to free memory before next iteration
       try {
-        const fs = require('fs');
         if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+        if (finalUploadPath !== tempFilePath && fs.existsSync(finalUploadPath)) {
+          fs.unlinkSync(finalUploadPath);
+        }
       } catch(e) {}
-      
-      // Wait for Gemini File API to finish processing the video frames natively
-      console.log(`[gemini] Waiting for Gemini AI Studio to process the video context window...`);
+
+      fileUploadResults.push({ fileName, uploadedFile, index });
+    }
+
+    // CONCURRENTLY wait for all uploaded files to finish processing on Gemini's servers
+    const geminiVideoParts = await Promise.all(fileUploadResults.map(async (res) => {
+      let { uploadedFile, fileName, index } = res;
+      console.log(`[gemini] [Video ${index + 1}] Waiting for Gemini AI Studio to process the video context window...`);
       while (uploadedFile.state === "PROCESSING") {
         await delay(5000);
         uploadedFile = await ai.files.get({ name: uploadedFile.name! });
@@ -184,15 +234,15 @@ export async function analyzeWebSession({
         throw new Error(`Gemini File API failed to process the video ${fileName}`);
       }
       
-      console.log(`[gemini] Video processed successfully! URI: ${uploadedFile.uri}`);
+      console.log(`[gemini] [Video ${index + 1}] Video processed successfully! URI: ${uploadedFile.uri}`);
       
-      geminiVideoParts.push({
+      return {
         fileData: {
           fileUri: uploadedFile.uri,
           mimeType: uploadedFile.mimeType
         }
-      });
-    }
+      };
+    }));
 
     // Build action segment hints from per-video motion detection data (if any existed before dumb-pipe)
     const actionSegments: Array<{ video: number; start: string; end: string }> = [];
@@ -214,6 +264,11 @@ export async function analyzeWebSession({
       jerseyColor: sessionData.jerseyColor,
       ageGroup,
       actionSegments: actionSegments.length > 0 ? actionSegments : undefined,
+    });
+
+    // Record: AI analysis phase is starting (video upload to Gemini complete)
+    await sessionRef.update({
+      "stepTimestamps.aiAnalysisStartedAt": admin.firestore.FieldValue.serverTimestamp(),
     });
 
     console.log(`[gemini] Analyzing session ${sessionRef.id} with ${geminiVideoParts.length} video(s) natively on Google AI Studio...`);
