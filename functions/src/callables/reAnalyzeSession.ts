@@ -10,7 +10,7 @@ import * as admin from "firebase-admin";
  * passes targetUserId so we look up the session under the correct user's collection.
  */
 export const reAnalyzeSession = onCall(
-  { secrets: ["GEMINI_API_KEY"], timeoutSeconds: 540, memory: "2GiB", concurrency: 1, invoker: "public" },
+  { secrets: ["GEMINI_API_KEY"], timeoutSeconds: 540, memory: "8GiB", cpu: 2, concurrency: 1, invoker: "public" },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be signed in.");
@@ -47,7 +47,11 @@ export const reAnalyzeSession = onCall(
     }
 
     // Mark as processing immediately so UI updates
-    await sessionRef.update({ status: "processing", errorMessage: admin.firestore.FieldValue.delete() });
+    await sessionRef.update({
+      status: "processing",
+      errorMessage: admin.firestore.FieldValue.delete(),
+      stepTimestamps: { queuedAt: admin.firestore.FieldValue.serverTimestamp() },
+    });
 
     try {
       const { analyzeWebSession } = await import("../utils/geminiAnalysis");

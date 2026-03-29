@@ -7,7 +7,7 @@ import * as admin from "firebase-admin";
  * and writes the structured analysis back to the session doc.
  */
 export const onWebSessionUploaded = onObjectFinalized(
-  { timeoutSeconds: 540, secrets: ["GEMINI_API_KEY"], memory: "2GiB", concurrency: 1 },
+  { timeoutSeconds: 540, secrets: ["GEMINI_API_KEY"], memory: "8GiB", cpu: 2, concurrency: 1 },
   async (event) => {
     const filePath = event.data.name;
     if (!filePath) return;
@@ -84,7 +84,10 @@ export const onWebSessionUploaded = onObjectFinalized(
     }
 
     // Mark as processing so duplicate triggers are ignored
-    await sessionRef.update({ status: "processing" });
+    await sessionRef.update({
+      status: "processing",
+      "stepTimestamps.queuedAt": admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     console.log(`Analyzing session ${sessionRef.id} for user ${userId}`);
 
