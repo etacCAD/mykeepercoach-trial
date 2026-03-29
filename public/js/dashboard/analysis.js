@@ -101,7 +101,7 @@ export async function reAnalyze(currentUser, firebase, sessionId, btn) {
 
     try {
         const functions = getFunctions(firebase.app);
-        const reAnalyzeSession = httpsCallable(functions, 'reAnalyzeSession');
+        const reAnalyzeSession = httpsCallable(functions, 'reAnalyzeSession', { timeout: 3600000 });
 
         console.log(`[reAnalyze] Calling reAnalyzeSession for ${sessionId}`, targetUserId ? `(as ${targetUserId})` : '');
         await reAnalyzeSession({ sessionId, ...(targetUserId && { targetUserId }) });
