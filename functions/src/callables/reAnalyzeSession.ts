@@ -10,7 +10,7 @@ import * as admin from "firebase-admin";
  * passes targetUserId so we look up the session under the correct user's collection.
  */
 export const reAnalyzeSession = onCall(
-  { secrets: ["GEMINI_API_KEY"], timeoutSeconds: 540, memory: "8GiB", cpu: 2, concurrency: 1, invoker: "public" },
+  { secrets: ["GEMINI_API_KEY"], timeoutSeconds: 540, memory: "8GiB", cpu: 8, concurrency: 1, invoker: "public" },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be signed in.");

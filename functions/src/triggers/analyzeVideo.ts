@@ -3,8 +3,13 @@ import { logger } from "firebase-functions";
 import { GoogleGenAI } from "@google/genai";
 import * as path from "path";
 import * as os from "os";
+import * as fs from "fs";
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 
 const db = admin.firestore();
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 // ── Gemini response schema ───────────────────────────────────────────────────
 
@@ -89,7 +94,7 @@ export async function analyzeVideo(params: AnalyzeVideoParams): Promise<string> 
   const ai = new GoogleGenAI({ apiKey });
 
   // Determine MIME type from file path
-  const mimeType = filePath.endsWith(".mov") ? "video/quicktime" : "video/mp4";
+  let mimeType = filePath.endsWith(".mov") ? "video/quicktime" : "video/mp4";
   
   const bucket = admin.storage().bucket();
   let analysisResult: any;
@@ -104,16 +109,49 @@ export async function analyzeVideo(params: AnalyzeVideoParams): Promise<string> 
     logger.info("Downloading video for analysis to memory:", { tempFilePath });
     await bucket.file(filePath).download({ destination: tempFilePath });
 
+    // Conditional compression if file size > 1.8 GB
+    const stats = fs.statSync(tempFilePath);
+    const fileSizeInBytes = stats.size;
+    const ONE_POINT_EIGHT_GB = 1.8 * 1024 * 1024 * 1024;
+    let finalUploadPath = tempFilePath;
+
+    if (fileSizeInBytes > ONE_POINT_EIGHT_GB) {
+      logger.info(`Video is large (${(fileSizeInBytes / (1024 * 1024)).toFixed(2)} MB), compressing via ffmpeg...`);
+      const compressedPath = path.join(os.tmpdir(), "compressed_" + fileName + ".mp4");
+      
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(tempFilePath)
+          .outputOptions([
+            "-c:v libx264",
+            "-crf 28", // Compresses visual quality reasonably
+            "-preset ultrafast", // Fastest encoding speed for cloud functions
+            "-c:a aac",
+            "-b:a 128k",
+            "-s 1280x720" // Downscale to 720p maximum
+          ])
+          .on("start", (cmd: string) => logger.info("FFMPEG Start:", { cmd }))
+          .on("end", () => resolve())
+          .on("error", (err: Error) => reject(err))
+          .save(compressedPath);
+      });
+
+      finalUploadPath = compressedPath;
+      mimeType = "video/mp4"; // output from libx264 defaults to mp4 wrapper standard here
+      logger.info("Compression complete.");
+    }
+
     // 2. Upload to Gemini AI Studio
     logger.info("Uploading buffer to Gemini AI Studio...");
-    let uploadedFile = await ai.files.upload({ file: tempFilePath, config: { mimeType } });
+    let uploadedFile = await ai.files.upload({ file: finalUploadPath, config: { mimeType } });
     if (!uploadedFile.name) throw new Error("Failed to get file name from Gemini File API");
     geminiFileName = uploadedFile.name;
 
     // Delete local buffer
     try {
-      const fs = require('fs');
       if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+      if (finalUploadPath !== tempFilePath && fs.existsSync(finalUploadPath)) {
+        fs.unlinkSync(finalUploadPath);
+      }
     } catch (e) {}
 
     // 3. Poll for processing completion
