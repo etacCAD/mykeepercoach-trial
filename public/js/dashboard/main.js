@@ -6,7 +6,7 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 import { addUploadListeners } from "./upload.js?v=5";
 import { startSessionListener, toggleSelectMode, selectAll, confirmBulkDelete } from "./sessions.js?v=5";
 import { addModalListeners } from "./modals.js";
-import { initTrendsChart, initRadarChart } from "./trends.js";
+import { initTrendsChart, initRadarChart } from "./trends.js?v=6";
 
 let currentUser = null;
 let firebase = {};
