@@ -4,4 +4,4 @@
  */
 
 /** The Gemini model used for all AI calls (chat, analysis, etc.) */
-export const GEMINI_MODEL = "gemini-1.5-pro";
+export const GEMINI_MODEL = "gemini-2.5-flash";

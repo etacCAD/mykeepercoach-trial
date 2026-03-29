@@ -273,26 +273,96 @@ export async function analyzeWebSession({
 
     console.log(`[gemini] Analyzing session ${sessionRef.id} with ${geminiVideoParts.length} video(s) natively on Google AI Studio...`);
 
-    const result = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-            ...geminiVideoParts
+    let analysis: any = null;
+
+    if (geminiVideoParts.length === 1) {
+      // Standard single-video execution
+      const result = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: [
+          {
+            role: "user",
+            parts: [ { text: prompt }, geminiVideoParts[0] ],
+          }
+        ],
+        config: { responseMimeType: "application/json" }
+      });
+
+      const rawText = result.text;
+      if (!rawText) throw new Error("No text response received from Gemini");
+      analysis = parseGeminiJson(rawText);
+    } else {
+      // Map-Reduce to avoid 1 Million token limit on 2.5-flash for multiple halves/long segments.
+      const partAnalyses: any[] = [];
+      for (let i = 0; i < geminiVideoParts.length; i++) {
+        console.log(`[gemini] [Video ${i + 1}/${geminiVideoParts.length}] Running partial analysis...`);
+        const result = await ai.models.generateContent({
+          model: GEMINI_MODEL,
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt + `\n\n[NOTE: This is video part ${i + 1} of ${geminiVideoParts.length}. Analyze just this portion.]` }, geminiVideoParts[i]],
+            }
           ],
-        }
-      ],
-      config: {
-        responseMimeType: "application/json"
+          config: { responseMimeType: "application/json" }
+        });
+        const rawText = result.text;
+        if (!rawText) throw new Error(`No text response received from Gemini for video ${i + 1}`);
+        partAnalyses.push(parseGeminiJson(rawText));
       }
-    });
 
-    const rawText = result.text;
-    if (!rawText) throw new Error("No text response received from Gemini");
+      console.log(`[gemini] Merging ${partAnalyses.length} JSON reports into a final report...`);
+      const mergePrompt = `You are a strict JSON data merging assistant for an expert goalkeeper coach. I have analyzed a match video in ${partAnalyses.length} parts to avoid file size limits.
+Here are the partial JSON reports for each part:
 
-    const analysis = parseGeminiJson(rawText);
+${JSON.stringify(partAnalyses, null, 2)}
+
+Please merge these partial reports into a single, cohesive, final JSON report matching the exact same schema.
+- Average the numerical skill scores across all parts, handling null appropriately.
+- Combine strengths, areas to improve, and highlights (keep up to 10 highlights total, prioritized). For highlights, prefix the timestamp with 'Pt1-', 'Pt2-', etc. if necessary, though retaining original timestamps is fine.
+- Provide a holistic "summary" and "coachNote" that sounds natural.
+- Sum up integer stats like saves, goalsConceded, shotsOnTarget, crossesClaimed.
+- If ANY part had a cleanSheet as false, the final cleanSheet must be false.
+
+Return ONLY the merged valid JSON object (no markdown, no explanation).
+The schema is:
+{
+  "summary": "<2-3 sentence overall match summary>",
+  "coachNote": "<personalized coaching note for the keeper, 2-3 sentences>",
+  "skills": {
+    "Shot Stopping": { "score": <0-100 or null>, "feedback": "<1-2 sentences>" },
+    "Positioning": { "score": <0-100 or null>, "feedback": "<1-2 sentences>" },
+    "Cross Management": { "score": <0-100 or null>, "feedback": "<1-2 sentences>" },
+    "Distribution": { "score": <0-100 or null>, "feedback": "<1-2 sentences>" },
+    "Communication": { "score": <0-100 or null>, "feedback": "<1-2 sentences>" },
+    "1v1 Situations": { "score": <0-100 or null>, "feedback": "<1-2 sentences>" }
+  },
+  "stats": {
+    "saves": <int>,
+    "goalsConceded": <int>,
+    "shotsOnTarget": <int>,
+    "crossesClaimed": <int>,
+    "cleanSheet": <boolean>
+  },
+  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
+  "areasToImprove": ["<area 1>", "<area 2>"],
+  "highlights": [
+    {
+      "timestamp": "<MM:SS>",
+      "description": "<describe it>",
+      "type": "<e.g., 'Tough Save', '1v1'>"
+    }
+  ]
+}`;
+      const mergeResult = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: mergePrompt,
+        config: { responseMimeType: "application/json" }
+      });
+      const mergeText = mergeResult.text;
+      if (!mergeText) throw new Error("No text response received from Gemini during merge");
+      analysis = parseGeminiJson(mergeText);
+    }
 
     // Calculate overallRating deterministically (1-10 scale based on valid 0-100 scores)
     const skills = analysis.skills || {};
