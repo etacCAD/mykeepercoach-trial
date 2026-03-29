@@ -476,7 +476,7 @@ function renderSessionCard(s) {
 
         // Find active step for the ETA label
         const activeStep = steps.find(st => st.active);
-        const etaLabel = activeStep?.eta ? `<span class="step-eta">${activeStep.eta} remaining</span>` : '';
+        const etaLabel = activeStep?.eta ? `<span class="step-eta">${activeStep.eta} until report is ready</span>` : '';
 
         const stepDots = steps.map((st, i) => {
             const cls = st.done ? 'step-dot step-done' : st.active ? 'step-dot step-active' : 'step-dot step-waiting';
