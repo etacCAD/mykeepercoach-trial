@@ -31,8 +31,6 @@ export const onWebSessionUploaded = onObjectFinalized(
     const sessionsRef = db.collection("users").doc(userId).collection("sessions");
     const pending = await sessionsRef
       .where("status", "==", "pending")
-      .orderBy("createdAt", "desc")
-      .limit(5)
       .get();
 
     if (pending.empty) {

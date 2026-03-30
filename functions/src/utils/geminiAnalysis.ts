@@ -194,11 +194,12 @@ export async function analyzeWebSession({
           ffmpeg(tempFilePath)
             .outputOptions([
               "-c:v libx264",
-              "-crf 28", // Compresses visual quality reasonably
-              "-preset ultrafast", // Fastest encoding speed for cloud functions
+              "-crf 32", // Heavy compression to ensure we get under 2GB limit
+              "-preset veryfast", // Balances encoding speed and file size better than ultrafast
+              "-r 24", // Drop frame rate to 24fps
               "-c:a aac",
-              "-b:a 128k",
-              "-s 1280x720" // Downscale to 720p maximum
+              "-b:a 64k", // Lower audio bitrate
+              "-s 854x480" // Downscale to 480p maximum
             ])
             .on("start", (cmd: string) => console.log(`[gemini] [Video ${index + 1}] FFMPEG Start:`, { cmd }))
             .on("end", () => resolve())
@@ -209,6 +210,11 @@ export async function analyzeWebSession({
         finalUploadPath = compressedPath;
         mimeType = "video/mp4"; // Output from libx264 defaults to mp4 wrapper standard here
         console.log(`[gemini] [Video ${index + 1}] Compression complete.`);
+      }
+      
+      const finalStats = fs.statSync(finalUploadPath);
+      if (finalStats.size > 2147483648) {
+        throw new Error(`Video is still too large (${(finalStats.size / (1024 * 1024)).toFixed(2)} MB) even after heavy compression. Google AI limit is 2GB. Please cut the video into smaller segments and upload again.`);
       }
       
       console.log(`[gemini] [Video ${index + 1}] Uploading to Gemini AI Studio File API...`);

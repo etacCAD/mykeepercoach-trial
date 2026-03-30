@@ -455,15 +455,14 @@ function renderSessionCard(s) {
             dynamicEta = mins > 0 ? `~${hrs}h ${mins}m` : `~${hrs}h`;
         }
 
-        // Derive pipeline step from the real errorMessage written by analysis.js
-        const isProcessing = s.status === 'processing';
-        const isVerifying = statusMsg.includes('verifying');
-        const isUploading = statusMsg.includes('uploading') || statusMsg.includes('downloading');
-        const isAnalyzing = statusMsg.includes('analyzing') || statusMsg.includes('ai');
-        const isOnServer = statusMsg.includes('processing video on ai');
-        const isGenerating = isProcessing && elapsedMin >= TOTAL_EST_MINS - 1;
-
         const stepTs = s.stepTimestamps || {};
+        
+        // Derive pipeline step from stepTimestamps instead of errorMessage
+        const isProcessing = s.status === 'processing';
+        const hasQueued = !!stepTs.queuedAt;
+        const hasProcessingStarted = !!stepTs.processingStartedAt;
+        const hasAiAnalysisStarted = !!stepTs.aiAnalysisStartedAt;
+        const isGenerating = isProcessing && !!hasAiAnalysisStarted && elapsedMin >= TOTAL_EST_MINS - 1;
 
         // Helper: format a Firestore timestamp to a readable time string
         function fmtTs(ts) {
@@ -513,11 +512,11 @@ function renderSessionCard(s) {
             : '';
 
         const steps = [
-            { label: `Videos Uploaded${uploadedTime ? ' · ' + uploadedTime : ''}`, done: true,     active: false,                                            eta: null },
-            { label: 'Queued for Analysis',     done: isProcessing,                                 active: s.status === 'pending',                           eta: dynamicEta },
-            { label: 'Processing Video',        done: isProcessing && (isAnalyzing || isGenerating), active: isProcessing && (isVerifying || isUploading || isOnServer), eta: dynamicEta },
-            { label: 'AI Analyzing Footage',    done: isGenerating,                                  active: isProcessing && isAnalyzing && !isGenerating,     eta: dynamicEta },
-            { label: 'Generating Your Report',  done: false,                                         active: isGenerating,                                     eta: dynamicEta },
+            { label: `Videos Uploaded${uploadedTime ? ' · ' + uploadedTime : ''}`, done: true, active: false, eta: null },
+            { label: 'Queued for Analysis',     done: isProcessing || hasProcessingStarted, active: s.status === 'pending' || (isProcessing && !hasProcessingStarted), eta: dynamicEta },
+            { label: 'Processing Video',        done: hasAiAnalysisStarted, active: hasProcessingStarted && !hasAiAnalysisStarted, eta: dynamicEta },
+            { label: 'AI Analyzing Footage',    done: isGenerating, active: hasAiAnalysisStarted && !isGenerating, eta: dynamicEta },
+            { label: 'Generating Your Report',  done: false, active: isGenerating, eta: dynamicEta },
         ];
 
         // Find active step for the ETA label

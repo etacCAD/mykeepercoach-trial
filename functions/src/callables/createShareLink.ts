@@ -7,12 +7,19 @@ export const createShareLink = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "Must be signed in to share a report.");
   }
 
-  const { sessionId } = request.data as { sessionId: string };
+  const { sessionId, targetUid } = request.data as { sessionId: string; targetUid?: string };
   if (!sessionId) {
     throw new HttpsError("invalid-argument", "sessionId is required.");
   }
 
-  const uid = request.auth.uid;
+  let uid = request.auth.uid;
+  if (targetUid && targetUid !== uid) {
+    if (request.auth.token.email !== "evan@tacanni.com") {
+      throw new HttpsError("permission-denied", "Only administrators can share on behalf of other users.");
+    }
+    uid = targetUid; // Use the provided user ID if the admin is impersonating
+  }
+
   const db = admin.firestore();
 
   try {

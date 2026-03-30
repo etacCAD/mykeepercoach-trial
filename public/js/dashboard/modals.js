@@ -53,7 +53,10 @@ export function addModalListeners(currentUser, firebase) {
             try {
                 const functions = getFunctions(firebase.app);
                 const createShareLink = httpsCallable(functions, 'createShareLink');
-                const res = await createShareLink({ sessionId: currentAnalysisSessionId });
+                const res = await createShareLink({ 
+                    sessionId: currentAnalysisSessionId,
+                    targetUid: currentUser.uid // If impersonating, this is the player's UID
+                });
                 const shareUrl = window.location.origin + '/report.html?id=' + res.data.shareId;
                 
                 await navigator.clipboard.writeText(shareUrl);
