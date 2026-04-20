@@ -31,13 +31,29 @@
             </div>
             
             <div class="input-group">
+                <label for="dob">Date of Birth</label>
+                <input type="date" id="dob" required>
+            </div>
+
+            <div class="input-group" id="parentalConsentGroup" style="display: none;">
+                <label for="guardianEmail">Parent/Guardian Email <span style="font-size: 0.8em; color: #ff9800;">(Required for under 13)</span></label>
+                <input type="email" id="guardianEmail" placeholder="parent@example.com">
+            </div>
+            
+            <div class="input-group">
                 <label for="signupPassword">Password</label>
                 <input type="password" id="signupPassword" required placeholder="••••••••">
+                <small id="passwordHint" style="display:block; margin-top:5px; font-size: 0.8rem; color: #aaa;">Must be at least 8 characters with 1 number or symbol.</small>
             </div>
 
             <div class="input-group">
                 <label for="promoCode">Promo Code <span style="opacity:0.5;font-weight:400;">(optional)</span></label>
                 <input type="text" id="promoCode" placeholder="e.g. CAMP2026" style="text-transform:uppercase;">
+            </div>
+
+            <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                <input type="checkbox" id="tosAccept" required style="width: auto; margin: 0;">
+                <label for="tosAccept" style="margin: 0; font-size: 0.9em;">I agree to the <a href="/terms" target="_blank" style="color: #646cff; text-decoration: underline;">Terms of Service</a> & <a href="/privacy" target="_blank" style="color: #646cff; text-decoration: underline;">Privacy Policy</a>.</label>
             </div>
             
             <button type="submit" class="btn primary-btn" id="signupBtn">Start Training — Free</button>

@@ -10,14 +10,12 @@ export const initFirebase = async () => {
     if (isInitialized) return { app, auth, db, storage };
     try {
         const config = {
-  "apiKey": "AIzaSyAghUU6j4CyBYp5nw9R7foZvg7dqAR2Fy0",
-  "appId": "1:488324444704:web:62c3c12598dfb8f0460245",
-  "authDomain": "goalie-coach-dev-11a17.firebaseapp.com",
-  "databaseURL": "",
-  "measurementId": "G-XJG7JKQFWJ",
-  "messagingSenderId": "488324444704",
-  "projectId": "goalie-coach-dev-11a17",
-  "storageBucket": "goalie-coach-dev-11a17.firebasestorage.app"
+  "apiKey": "AIzaSyD3-c36MGfn15j9O45R62-uNOPfbVHhgtU",
+  "appId": "1:969478109699:web:86f9f891a954f6ec90ac36",
+  "authDomain": "mykeepercoach-prod.firebaseapp.com",
+  "messagingSenderId": "969478109699",
+  "projectId": "mykeepercoach-prod",
+  "storageBucket": "mykeepercoach-prod.firebasestorage.app"
 };
         
         if (!config.apiKey) console.warn("Firebase Config missing! Check Firebase Hosting setup.");

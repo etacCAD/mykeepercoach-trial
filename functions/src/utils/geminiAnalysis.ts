@@ -65,6 +65,7 @@ CRITICAL INSTRUCTIONS FOR VIDEO ANALYSIS:
 - For side-angle footage or noisy environments, DO NOT interpret background noise, substitute players, crowd movements, parents, or passing cars as on-field action.
 - Only analyze the purposeful movements, saves, positioning, and distribution of the active goalkeeper.
 - Ignore camera panning artifacts or blurriness.
+- EXACT STATS: For the "stats" object (saves, goalsConceded, shotsOnTarget, crossesClaimed), you MUST provide the exact count of events you explicitly observed. DO NOT output percentages, estimations, or arbitrary large numbers (like 70 or 80). These must be realistic single-digit or low double-digit match counts. If you are unsure, default to 0.
 
 Watch this goalkeeper footage carefully and return ONLY a valid JSON object (no markdown, no explanation) matching this exact schema:
 
@@ -334,7 +335,7 @@ Please merge these partial reports into a single, cohesive, final JSON report ma
 - Average the numerical skill scores across all parts, handling null appropriately.
 - Combine strengths, areas to improve, and highlights (keep up to 10 highlights total, prioritized). For highlights, prefix the timestamp with 'Pt1-', 'Pt2-', etc. if necessary, though retaining original timestamps is fine.
 - Provide a holistic "summary" and "coachNote" that sounds natural.
-- Sum up integer stats like saves, goalsConceded, shotsOnTarget, crossesClaimed.
+- MATHEMATICALLY SUM integer stats like saves, goalsConceded, shotsOnTarget, crossesClaimed. Do NOT use string concatenation (e.g. 7 and 0 is 7, not 70). Do NOT invent or inflate numbers. If the total is unrealistically high (e.g., > 30), reconsider your sum.
 - If ANY part had a cleanSheet as false, the final cleanSheet must be false.
 
 Return ONLY the merged valid JSON object (no markdown, no explanation).

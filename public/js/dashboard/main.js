@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Single profile fetch (was duplicated before)
         let userProfile = null;
-        let firstName = isImpersonating ? targetUid : user.email.split('@')[0];
+        let firstName = isImpersonating ? targetUid : (user.email?.split('@')[0] || "Coach");
         let fullName = firstName;
 
         try {
@@ -85,8 +85,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             ? { uid: targetUid, email: userProfile?.email || targetUid, getIdToken: () => user.getIdToken() }
             : user;
 
-        // Check trial status (always for the actual auth user)
-        await checkTrialStatus();
+        // Check trial status (always for the actual auth user) without blocking
+        checkTrialStatus();
 
         // Pass dependencies straight to modules
         addUploadListeners(targetUser, firebase);

@@ -695,10 +695,57 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ── Batch Load Modal ────────────────────────────────────
+    // ── Batch Load Modal + Resilience ───────────────────────
     let batchFilesGrouped = {};
     let batchTotalFiles = 0;
-    
+    let batchUploadTasks = [];
+    let batchUploadInProgress = false;
+    let batchWakeLock = null;
+
+    async function requestBatchWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                batchWakeLock = await navigator.wakeLock.request('screen');
+                console.log('Screen Wake Lock acquired to prevent sleep during batch upload');
+            }
+        } catch (err) {
+            console.warn(`Wake Lock error: ${err.message}`);
+        }
+    }
+
+    function releaseBatchWakeLock() {
+        if (batchWakeLock !== null) {
+            batchWakeLock.release().then(() => { batchWakeLock = null; });
+        }
+    }
+
+    function handleBatchVisibilityChange() {
+        if (!batchUploadInProgress) return;
+        if (document.hidden) {
+            console.log("Tab backgrounded. Pausing batch uploads...");
+            batchUploadTasks.forEach(task => { try { task.pause(); } catch(e){} });
+        } else {
+            console.log("Tab visible. Resuming batch uploads...");
+            if (batchWakeLock === null) requestBatchWakeLock();
+            batchUploadTasks.forEach(task => { try { task.resume(); } catch(e){} });
+        }
+    }
+
+    function batchBeforeUnloadHandler(e) {
+        e.preventDefault();
+        e.returnValue = 'Batch upload is still in progress. If you leave, it will be cancelled.';
+        return e.returnValue;
+    }
+
+    function cancelBatchUpload() {
+        batchUploadTasks.forEach(task => { try { task.cancel(); } catch (_) {} });
+        batchUploadTasks = [];
+        batchUploadInProgress = false;
+        window.removeEventListener('beforeunload', batchBeforeUnloadHandler);
+        document.removeEventListener('visibilitychange', handleBatchVisibilityChange);
+        releaseBatchWakeLock();
+    }
+
     function openBatchModal(uid, name) {
         document.getElementById('batchUid').value = uid;
         document.getElementById('batchPlayerName').textContent = name;
@@ -710,14 +757,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('confirmBatchBtn').disabled = true;
         document.getElementById('confirmBatchBtn').textContent = 'Upload & Create Matches';
         document.getElementById('cancelBatchBtn').disabled = false;
+        document.getElementById('cancelBatchBtn').textContent = 'Cancel';
         document.getElementById('batchModal').style.display = 'flex';
         batchFilesGrouped = {};
         batchTotalFiles = 0;
+        batchUploadTasks = [];
+        batchUploadInProgress = false;
     }
 
     function closeBatchModal() {
-        if (document.getElementById('confirmBatchBtn').disabled && document.getElementById('confirmBatchBtn').textContent === 'Uploading...') return;
+        if (batchUploadInProgress) {
+            if (!confirm('Batch upload is in progress. Are you sure you want to cancel?')) {
+                return;
+            }
+            cancelBatchUpload();
+            if (document.getElementById('batchStatusMsg').textContent !== "✓ Batch upload complete!") {
+                document.getElementById('batchErrorMsg').style.display = 'block';
+                document.getElementById('batchErrorMsg').textContent = 'Upload cancelled by user.';
+            }
+        }
         document.getElementById('batchModal').style.display = 'none';
+        document.getElementById('confirmBatchBtn').disabled = false;
+        document.getElementById('confirmBatchBtn').textContent = 'Upload & Create Matches';
     }
 
     document.getElementById('closeBatchModal').addEventListener('click', closeBatchModal);
@@ -797,12 +858,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             return `
             <div class="batch-group">
                 <div class="batch-group-title">Match Date: ${dateStr} (${groupFiles.length} video${groupFiles.length > 1 ? 's' : ''})</div>
-                ${groupFiles.map(f => `
-                    <div class="batch-file-item">
-                        <span>${f.name}</span>
-                        <span>${(f.size / (1024*1024)).toFixed(1)} MB</span>
+                ${groupFiles.map(f => {
+                    const safeId = f.name.replace(/[^a-zA-Z0-9]/g, '_');
+                    return `
+                    <div class="batch-file-item" style="flex-direction: column; align-items: stretch; margin-bottom: 0.5rem; gap: 0.3rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>${f.name}</span>
+                            <span>${(f.size / (1024*1024)).toFixed(1)} MB</span>
+                        </div>
+                        <div class="progress-bar-bg" style="height: 4px; border-radius: 2px;">
+                            <div class="progress-bar-fill" id="file-prog-${safeId}" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; box-shadow: 0 0 6px var(--accent-rgb, transparent);"></div>
+                        </div>
                     </div>
-                `).join('')}
+                `}).join('')}
             </div>`;
         }).join('');
 
@@ -822,9 +890,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const statusMsg = document.getElementById('batchStatusMsg');
 
         btn.disabled = true;
-        cancelBtn.disabled = true;
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = 'Cancel Upload';
         btn.textContent = 'Uploading...';
         progressContainer.style.display = 'block';
+        
+        batchUploadInProgress = true;
+        batchUploadTasks = [];
+        window.addEventListener('beforeunload', batchBeforeUnloadHandler);
+        document.addEventListener('visibilitychange', handleBatchVisibilityChange);
+        requestBatchWakeLock();
         errorMsg.style.display = 'none';
         statusMsg.style.display = 'none';
 
@@ -874,12 +949,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     const storageRefObj = ref(storage, storagePath);
                     const task = uploadBytesResumable(storageRefObj, file, { contentType: mimeType });
+                    batchUploadTasks.push(task);
+                    
+                    const safeId = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+                    const fileProgressFill = document.getElementById(`file-prog-${safeId}`);
                     
                     return new Promise((resolve, reject) => {
                         task.on('state_changed', 
-                            () => {}, 
-                            (err) => reject(err), 
+                            (snapshot) => {
+                                if (fileProgressFill) {
+                                    const filePct = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                    fileProgressFill.style.width = `${filePct}%`;
+                                }
+                            }, 
+                            (err) => err.code === 'storage/canceled' ? resolve(null) : reject(err), 
                             async () => {
+                                if (fileProgressFill) {
+                                    fileProgressFill.style.width = '100%';
+                                    fileProgressFill.style.background = '#48bb78';
+                                    fileProgressFill.style.boxShadow = '0 0 6px rgba(72,187,120,0.6)';
+                                }
                                 const url = await getDownloadURL(task.snapshot.ref);
                                 filesUploaded++;
                                 const totalPct = Math.round((filesUploaded / batchTotalFiles) * 100);
@@ -891,7 +980,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 });
 
-                const results = await Promise.all(uploadPromises);
+                const settledResults = await Promise.allSettled(uploadPromises);
+                
+                const failures = settledResults.filter(r => r.status === 'rejected');
+                if (failures.length > 0) {
+                    const exactError = failures[0].reason?.message || 'Unknown network error';
+                    throw new Error(`Failed to upload videos for ${dateStr}. Reason: ${exactError}`);
+                }
+
+                const results = settledResults
+                    .filter(r => r.status === 'fulfilled' && r.value !== null)
+                    .map(r => r.value);
+                
+                if (results.length === 0) {
+                    throw new Error(`No videos were successfully uploaded for ${dateStr}.`);
+                }
                 
                 // Update session
                 await updateDoc(sessionRef, {
@@ -908,6 +1011,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             cancelBtn.textContent = "Return";
             cancelBtn.disabled = false;
             
+            batchUploadInProgress = false;
+            batchUploadTasks = [];
+            window.removeEventListener('beforeunload', batchBeforeUnloadHandler);
+            document.removeEventListener('visibilitychange', handleBatchVisibilityChange);
+            releaseBatchWakeLock();
+
             // Reload logs/UI
             await loadAll(db);
             
@@ -917,7 +1026,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             errorMsg.style.display = "block";
             btn.disabled = false;
             cancelBtn.disabled = false;
+            cancelBtn.textContent = "Cancel";
             btn.textContent = "Retry Failed";
+            
+            batchUploadInProgress = false;
+            batchUploadTasks = [];
+            window.removeEventListener('beforeunload', batchBeforeUnloadHandler);
+            document.removeEventListener('visibilitychange', handleBatchVisibilityChange);
+            releaseBatchWakeLock();
         }
     });
 

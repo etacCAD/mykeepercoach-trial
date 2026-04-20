@@ -21,7 +21,10 @@
             </div>
             
             <div class="input-group">
-                <label for="password">Password</label>
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                    <label for="password">Password</label>
+                    <a href="#" id="forgotPasswordLink" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: 600;">Forgot Password?</a>
+                </div>
                 <input type="password" id="password" required placeholder="••••••••">
             </div>
             
@@ -46,6 +49,30 @@
             </div>
             <p class="trial-callout-headline">Free Trial — Full Access Until June 30</p>
             <p class="trial-callout-sub">Full platform access. No credit card. No limits. Your game, your data.</p>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal-overlay" id="forgotPasswordModal" style="display:none;">
+        <div class="modal glassmorphism">
+            <div class="modal-header">
+                <h3>Reset Password</h3>
+                <button type="button" class="modal-close" id="closeForgotPasswordModal">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">Enter your email address and we'll send you a link to reset your password.</p>
+                <form id="forgotPasswordForm">
+                    <div class="input-group">
+                        <label for="resetEmail">Email Address</label>
+                        <input type="email" id="resetEmail" required placeholder="player@example.com">
+                    </div>
+                    <p id="resetMsg" class="status-msg" style="margin-top: 0.5rem;"></p>
+                    <div class="modal-footer" style="padding: 1rem 0 0 0;">
+                        <button type="button" class="btn outline-btn" id="cancelResetBtn">Cancel</button>
+                        <button type="submit" class="btn primary-btn" id="sendResetBtn">Send Reset Link</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
